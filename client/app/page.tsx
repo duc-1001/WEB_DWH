@@ -27,6 +27,8 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-slate-200/80 ${className || ''}`} />
 }
 
+import { Header } from '../components/olap/header'
+
 export default function Home() {
   const {
     activeFact,
@@ -254,6 +256,7 @@ export default function Home() {
   if (!activeState.metaLoaded) {
     return (
       <div className="min-h-screen bg-[linear-gradient(180deg,#f4f7f4_0%,#eef3ef_100%)] p-4 text-slate-700 lg:p-6">
+        <Header />
         <div className="flex min-h-[80vh] items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-emerald-800">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600"></div>
@@ -265,8 +268,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f4f7f4_0%,#eef3ef_100%)] p-4 text-slate-700 lg:p-6">
-      <main className="mx-auto flex w-full max-w-400 flex-col gap-4 lg:flex-row">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f4f7f4_0%,#eef3ef_100%)]">
+      <Header />
+      <div className="p-4 text-slate-700 lg:p-6">
+        <main className="mx-auto flex w-full max-w-400 flex-col gap-4 lg:flex-row">
         <FilterSidebar
           activeFact={activeFact}
           activeState={activeState}
@@ -342,7 +347,7 @@ export default function Home() {
           />
         )}
       </main>
-
+      </div>
     </div>
   )
 }

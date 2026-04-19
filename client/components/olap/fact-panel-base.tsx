@@ -3,12 +3,12 @@ import { MeasureChartConfigPanel } from './measure-chart-config'
 import type { ChartType } from './measure-chart-config'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  Search, 
-  X, 
-  ChevronDown, 
-  Layers, 
+import {
+  Plus,
+  Search,
+  X,
+  ChevronDown,
+  Layers,
   Filter,
   MoreHorizontal
 } from 'lucide-react'
@@ -20,6 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import { PivotTableView } from './PivotTableView'
 import {
   FactKey,
   DimensionMeta,
@@ -110,8 +117,8 @@ export function FactPanelBase({
   const [dimensionFilter, setDimensionFilter] = useState('');
   const filteredDimensionOptions = dimensionFilter
     ? availableDimensionOptions.filter((dimension) =>
-        formatDimLabel(dimension.name).toLowerCase().includes(dimensionFilter.toLowerCase())
-      )
+      formatDimLabel(dimension.name).toLowerCase().includes(dimensionFilter.toLowerCase())
+    )
     : availableDimensionOptions;
 
   return (
@@ -125,11 +132,10 @@ export function FactPanelBase({
               variant={activeFact === factKey ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveFact(factKey)}
-              className={`h-8 px-4 text-[11px] font-semibold transition-all ${
-                activeFact === factKey
+              className={`h-8 px-4 text-[11px] font-semibold transition-all ${activeFact === factKey
                   ? 'bg-emerald-700 hover:bg-emerald-800'
                   : 'bg-white text-slate-600 border-slate-200'
-              }`}
+                }`}
             >
               {factConfig[factKey].label}
             </Button>
@@ -179,8 +185,8 @@ export function FactPanelBase({
                     <div className="max-h-56 overflow-y-auto">
                       {filteredDimensionOptions.length > 0 ? (
                         filteredDimensionOptions.map((dimension) => (
-                          <DropdownMenuItem 
-                            key={dimension.name} 
+                          <DropdownMenuItem
+                            key={dimension.name}
                             onClick={() => {
                               toggleDimension(dimension.name);
                               setDimensionFilter('');
@@ -206,13 +212,13 @@ export function FactPanelBase({
             <div className="flex flex-wrap gap-1.5 min-h-[1.5rem] items-center">
               {activeState.selectedDimensions.length > 0 ? (
                 activeState.selectedDimensions.map((dimensionName) => (
-                  <Badge 
+                  <Badge
                     key={dimensionName}
                     variant="secondary"
                     className="pl-2.5 pr-1 py-0.5 gap-1 border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 transition-colors cursor-default group shadow-sm"
                   >
                     <span className="text-[10px] font-bold uppercase">{formatDimLabel(dimensionName)}</span>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleDimension(dimensionName);
@@ -246,7 +252,7 @@ export function FactPanelBase({
                 >
                   <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
                     <div className="flex items-center gap-2">
-                       <span className="text-[11px] font-bold text-slate-800 uppercase">{formatDimLabel(dimension.name)}</span>
+                      <span className="text-[11px] font-bold text-slate-800 uppercase">{formatDimLabel(dimension.name)}</span>
                     </div>
                     <button
                       onClick={() => toggleDimension(dimension.name)}
@@ -255,7 +261,7 @@ export function FactPanelBase({
                       <X size={12} />
                     </button>
                   </div>
-                  
+
                   <div className="space-y-2 rounded-lg border border-slate-50 bg-slate-50/50 p-2">
                     <div className="flex flex-wrap gap-1.5">
                       {allowedLevelIndexes.map((index) => {
@@ -265,11 +271,10 @@ export function FactPanelBase({
                           <button
                             key={level}
                             onClick={() => toggleDimensionLevel(dimension.name, index)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${
-                              checked 
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm' 
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
-                            }`}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${checked
+                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
+                              }`}
                           >
                             <span className="truncate">{level}</span>
                           </button>
@@ -316,86 +321,112 @@ export function FactPanelBase({
         />
       </div>
 
-      <div className="mt-5 rounded-xl border border-slate-200 p-3">
-        <h3 className="mb-3 text-sm font-semibold text-slate-800">Bảng dữ liệu</h3>
-        {activeState.tableLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
+      <div className="mt-5 rounded-xl border border-slate-200 p-3 bg-white shadow-sm">
+        <Tabs defaultValue="table" className="w-full">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Kết quả phân tích</h3>
+            <TabsList className="bg-slate-100/50 p-1 h-9">
+              <TabsTrigger value="table" className="text-[11px] font-bold uppercase px-4 h-7 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">Bảng dữ liệu</TabsTrigger>
+              <TabsTrigger value="pivot" className="text-[11px] font-bold uppercase px-4 h-7 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">Bảng Pivot</TabsTrigger>
+            </TabsList>
           </div>
-        ) : filteredRows.length === 0 ? (
-          <p className="text-sm text-slate-500">Không tìm thấy bản ghi phù hợp với điều kiện tìm kiếm.</p>
-        ) : (
-          <div className="max-h-125 overflow-auto rounded-lg border border-slate-100">
-            <table className="w-full min-w-max border-collapse text-sm">
-              <thead className="sticky top-0 bg-slate-100 text-slate-700">
-                <tr>
-                  {tableColumns.map((column) => (
-                    <th key={column.key} className="border-b border-slate-200 px-3 py-2 text-left font-semibold">
-                      {column.label}
-                    </th>
-                  ))}
-                  {activeState.selectedMeasures.map((measure) => (
-                    <th key={measure} className="border-b border-slate-200 px-3 py-2 text-left font-semibold">
-                      {measure}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, rowIndex) => (
-                  <tr key={`${rowIndex}-${row.dimensions[tableColumns[0]?.key || ''] || 'row'}`} className="odd:bg-white even:bg-slate-50">
-                    {tableColumns.map((column) => (
-                      <td key={`${rowIndex}-${column.key}`} className="border-b border-slate-100 px-3 py-2">
-                        {column.source === 'filter'
-                          ? column.key === 'year'
-                            ? activeState.filters.year
-                            : column.key === 'quarter'
-                              ? activeState.filters.quarter
-                              : column.key === 'month'
-                                ? activeState.filters.month
-                                : column.key === 'state'
-                                  ? activeState.filters.state
-                                  : column.key === 'city'
-                                    ? activeState.filters.city
-                                    : column.key === 'customerType'
-                                      ? activeState.filters.customerType
-                                      : column.key === 'productKey'
-                                        ? activeState.filters.productKey
-                                        : '-'
-                          : row.dimensions[column.key] || '-'}
-                      </td>
+
+          <TabsContent value="table" className="mt-0 outline-none">
+            {activeState.tableLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ) : filteredRows.length === 0 ? (
+              <p className="text-sm text-slate-500">Không tìm thấy bản ghi phù hợp với điều kiện tìm kiếm.</p>
+            ) : (
+              <div className="max-h-125 overflow-auto rounded-lg border border-slate-100 shadow-inner">
+                <table className="w-full min-w-max border-collapse text-sm">
+                  <thead className="sticky top-0 bg-slate-50 text-slate-700 shadow-sm z-10">
+                    <tr>
+                      {tableColumns.map((column) => (
+                        <th key={column.key} className="border-b border-slate-200 px-4 py-2.5 text-left font-bold uppercase text-[10px] tracking-wider bg-slate-50">
+                          {column.label}
+                        </th>
+                      ))}
+                      {activeState.selectedMeasures.map((measure) => (
+                        <th key={measure} className="border-b border-slate-200 px-4 py-2.5 text-right font-bold uppercase text-[10px] tracking-wider bg-slate-50">
+                          {measure}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row, rowIndex) => (
+                      <tr key={`${rowIndex}-${row.dimensions[tableColumns[0]?.key || ''] || 'row'}`} className="hover:bg-emerald-50/30 transition-colors border-b border-slate-50 last:border-0">
+                        {tableColumns.map((column) => (
+                          <td key={`${rowIndex}-${column.key}`} className="px-4 py-2 text-slate-600">
+                            {column.source === 'filter'
+                              ? column.key === 'year'
+                                ? activeState.filters.year
+                                : column.key === 'quarter'
+                                  ? activeState.filters.quarter
+                                  : column.key === 'month'
+                                    ? activeState.filters.month
+                                    : column.key === 'state'
+                                      ? activeState.filters.state
+                                      : column.key === 'city'
+                                        ? activeState.filters.city
+                                        : column.key === 'customerType'
+                                          ? activeState.filters.customerType
+                                          : column.key === 'productKey'
+                                            ? activeState.filters.productKey
+                                            : '-'
+                              : row.dimensions[column.key] || '-'}
+                          </td>
+                        ))}
+                        {activeState.selectedMeasures.map((measure) => (
+                          <td key={`${rowIndex}-${measure}`} className="px-4 py-2 text-right font-semibold text-slate-900 tabular-nums">
+                            {Number(row.measures[measure] || 0).toLocaleString('vi-VN')}
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-                    {activeState.selectedMeasures.map((measure) => (
-                      <td key={`${rowIndex}-${measure}`} className="border-b border-slate-100 px-3 py-2 font-medium text-slate-900">
-                        {Number(row.measures[measure] || 0).toLocaleString('vi-VN')}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-              {showTotalsRow ? (
-                <tfoot className="sticky bottom-0 bg-slate-100 text-slate-800">
-                  <tr>
-                    {tableColumns.map((column, columnIndex) => (
-                      <td key={`total-label-${column.key}`} className="border-t border-slate-300 px-3 py-2 font-semibold">
-                        {columnIndex === 0 ? 'Tổng' : '-'}
-                      </td>
-                    ))}
-                    {activeState.selectedMeasures.map((measure) => (
-                      <td key={`total-${measure}`} className="border-t border-slate-300 px-3 py-2 font-semibold text-slate-900">
-                        {Number(measureTotals[measure] || 0).toLocaleString('vi-VN')}
-                      </td>
-                    ))}
-                  </tr>
-                </tfoot>
-              ) : null}
-            </table>
-          </div>
-        )}
+                  </tbody>
+                  {showTotalsRow ? (
+                    <tfoot className="sticky bottom-0 bg-emerald-700 text-white font-bold z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+                      <tr>
+                        {tableColumns.map((column, columnIndex) => (
+                          <td key={`total-label-${column.key}`} className="px-4 py-3 border-emerald-600">
+                            {columnIndex === 0 ? 'TỔNG CỘNG' : ''}
+                          </td>
+                        ))}
+                        {activeState.selectedMeasures.map((measure) => (
+                          <td key={`total-${measure}`} className="px-4 py-3 text-right tabular-nums border-emerald-600">
+                            {Number(measureTotals[measure] || 0).toLocaleString('vi-VN')}
+                          </td>
+                        ))}
+                      </tr>
+                    </tfoot>
+                  ) : null}
+                </table>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="pivot" className="mt-0 outline-none">
+            {tableColumns.length < 2 ? (
+              <div className="py-12 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                <p className="text-sm text-slate-500 font-medium">Vui lòng chọn ít nhất 2 cột trong bảng dữ liệu để xem bảng Pivot.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Gợi ý: Chọn ít nhất 2 thuộc tính hoặc sử dụng bộ lọc.</p>
+              </div>
+            ) : (
+              <PivotTableView
+                rows={filteredRows}
+                columns={tableColumns}
+                measures={activeState.selectedMeasures}
+                filters={activeState.filters}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <ChartDisplayPanel

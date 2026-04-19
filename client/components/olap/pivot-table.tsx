@@ -116,12 +116,12 @@ export function PivotTable() {
   const generateCSV = () => {
     const headers = ['', ...getColumnValues()]
     const rows_list = getRowValues()
-    
+
     let csv = headers.join(',') + '\n'
     rows_list.forEach((rowVal: string) => {
       const row = [rowVal]
       getColumnValues().forEach((colVal: string) => {
-        const value = data.find(d => 
+        const value = data.find(d =>
           getRowKey(d) === rowVal && getColumnKey(d) === colVal
         )?.[measures[0]] || '-'
         row.push(value.toString())
@@ -286,7 +286,7 @@ export function PivotTable() {
                 const cellValue = data.find(
                   d => getRowKey(d) === rowVal && getColumnKey(d) === tableColumns[0]
                 )?.[measures[0]] || 0
-                
+
                 return (
                   <TableRow key={rowVal} className={getConditionalColor(cellValue as number, measures[0])}>
                     <TableCell className="font-medium text-foreground bg-card">
