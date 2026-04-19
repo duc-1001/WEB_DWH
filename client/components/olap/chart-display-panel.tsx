@@ -17,27 +17,12 @@ import {
   YAxis,
 } from 'recharts'
 import type { ChartType } from './measure-chart-config'
+import {
+  TableColumn,
+  CubeRow,
+  FilterState,
+} from '../../types/olap'
 
-type TableColumn = {
-  key: string
-  label: string
-  source: 'filter' | 'dimension'
-}
-
-type CubeRow = {
-  dimensions: Record<string, string>
-  measures: Record<string, number | string>
-}
-
-type FilterState = {
-  year: string
-  quarter: string
-  month: string
-  state: string
-  city: string
-  customerType: string
-  productKey: string
-}
 
 type ChartDisplayPanelProps = {
   chartType: ChartType
@@ -772,8 +757,8 @@ export function ChartDisplayPanel({
       ) : (
         <div>
           <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{mainChartTitle}</h4>
-          <div className="h-88 w-full">
-          <ResponsiveContainer>
+          <div className="h-80 w-full">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             {chartType === 'line' ? (
               <LineChart data={chartData} margin={MAIN_CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
@@ -984,7 +969,7 @@ export function ChartDisplayPanel({
                   <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
                     <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                     <div className="h-56">
-                      <ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <LineChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
                           <XAxis
@@ -1013,7 +998,7 @@ export function ChartDisplayPanel({
                     <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
                       <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                       <div className="h-56">
-                        <ResponsiveContainer>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <BarChart data={chartConfig.data} layout="vertical" margin={{ top: 10, right: 12, left: 34, bottom: 36 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
                             <XAxis
@@ -1042,7 +1027,7 @@ export function ChartDisplayPanel({
                   <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
                     <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                     <div className="h-56">
-                      <ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
                           <XAxis
@@ -1074,7 +1059,7 @@ export function ChartDisplayPanel({
                   <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
                     <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                     <div className="h-56">
-                      <ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
                           <XAxis
@@ -1111,7 +1096,7 @@ export function ChartDisplayPanel({
                     <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                     <p className="mb-2 text-[11px] text-slate-500">Chú giải theo màu: mỗi lát là một nhóm {chartConfig.xAxisLabel.toLowerCase()}.</p>
                     <div className="h-56">
-                      <ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <PieChart>
                           <Tooltip
                             labelFormatter={(value) => formatCategoryLabelByAxis(String(value || ''), chartConfig.xAxisLabel)}

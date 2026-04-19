@@ -6,6 +6,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    // Tat persistent cache cua Turbopack tren Windows de tranh loi SST file corruption
+    turbopackFileSystemCacheForDev: false,
+  },
 }
 
 export default nextConfig

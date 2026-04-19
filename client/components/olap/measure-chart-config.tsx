@@ -1,3 +1,17 @@
+import { 
+  BarChart2, 
+  LineChart as LineChartIcon, 
+  PieChart as PieChartIcon, 
+  AreaChart as AreaChartIcon,
+  BarChart,
+  Check,
+  TrendingUp,
+  Activity,
+  Box
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+
 type MeasureOption = {
   name: string
   uniqueName: string
@@ -8,14 +22,15 @@ export type ChartType = 'bar' | 'line' | 'area' | 'stackedBar' | 'pie'
 type ChartTypeOption = {
   value: ChartType
   label: string
+  icon: any
 }
 
 const CHART_TYPE_OPTIONS: ChartTypeOption[] = [
-  { value: 'bar', label: 'Biểu đồ cột' },
-  { value: 'line', label: 'Biểu đồ đường' },
-  { value: 'area', label: 'Biểu đồ miền' },
-  { value: 'stackedBar', label: 'Biểu đồ cột chồng' },
-  { value: 'pie', label: 'Biểu đồ tròn' },
+  { value: 'bar', label: 'Cột', icon: BarChart2 },
+  { value: 'line', label: 'Đường', icon: LineChartIcon },
+  { value: 'area', label: 'Miền', icon: AreaChartIcon },
+  { value: 'stackedBar', label: 'Cột chồng', icon: BarChart },
+  { value: 'pie', label: 'Tròn', icon: PieChartIcon },
 ]
 
 type MeasureChartConfigProps = {
@@ -66,68 +81,108 @@ export function MeasureChartConfigPanel({
   const recommendedTypes = getRecommendedChartTypes(dimensionCount, selectedMeasures.length, hasTimeDimension)
 
   return (
-    <div className="rounded-xl border border-slate-200 p-2.5">
-      <h3 className="mb-2 text-xs font-semibold text-slate-800">Chỉ số và biểu đồ - {factLabel}</h3>
-
-      <div className="mb-3 rounded-md border border-slate-200 p-2">
-        <p className="mb-2 text-xs text-slate-600">Chọn nhiều chỉ số</p>
-        <div className="max-h-40 space-y-1.5 overflow-auto pr-1 text-xs">
-          {measures.map((measure) => (
-            <label key={measure.uniqueName} className="flex items-center gap-2 text-slate-700">
-              <input
-                type="checkbox"
-                checked={selectedMeasures.includes(measure.name)}
-                onChange={() => onToggleMeasure(measure.name)}
-              />
-              <span>{measure.name}</span>
-            </label>
-          ))}
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700">
+            <TrendingUp size={16} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Chỉ số & Biểu đồ</h3>
+            <p className="text-[11px] text-slate-500">{factLabel}</p>
+          </div>
         </div>
       </div>
 
-      <label className="mb-3 block text-xs">
-        <span className="mb-1 block text-slate-600">Loại biểu đồ</span>
-        <select
-          value={chartType}
-          onChange={(event) => onChartTypeChange(normalizeChartType(event.target.value))}
-          className="h-9 w-full rounded-md border border-slate-200 bg-white px-2.5"
-        >
-          {CHART_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="p-3 space-y-4">
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            1. Chọn chỉ số
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {measures.map((measure) => {
+              const isSelected = selectedMeasures.includes(measure.name)
+              return (
+                <button
+                  key={measure.uniqueName}
+                  onClick={() => onToggleMeasure(measure.name)}
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-lg border text-left transition-all ${
+                    isSelected 
+                    ? 'border-indigo-200 bg-indigo-50 text-indigo-900 shadow-sm' 
+                    : 'border-slate-100 bg-slate-50/50 text-slate-600 hover:border-indigo-100 hover:bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 overflow-hidden">
+                    <div className={`p-1 rounded-md ${isSelected ? 'bg-indigo-200 text-indigo-700' : 'bg-slate-200 text-slate-400'}`}>
+                      <Activity size={10} />
+                    </div>
+                    <span className="text-[10px] font-bold truncate uppercase">{measure.name}</span>
+                  </div>
+                  {isSelected && <Check size={12} className="text-indigo-600 flex-shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-      <div className="mb-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-        Trục X lấy chiều dữ liệu đầu tiên đã chọn. Trục Y thể hiện tổng giá trị của các chỉ số đã chọn.
-      </div>
+        <div>
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            2. Loại biểu đồ
+          </label>
+          <div className="grid grid-cols-5 gap-1.5">
+            {CHART_TYPE_OPTIONS.map((option) => {
+              const isSelected = chartType === option.value
+              const Icon = option.icon
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => onChartTypeChange(option.value)}
+                  className={`flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all gap-1 ${
+                    isSelected
+                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50'
+                  }`}
+                  title={option.label}
+                >
+                  <Icon size={14} />
+                  <span className="text-[9px] font-bold uppercase">{option.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-      <div className="rounded-lg border border-slate-100 bg-white p-3">
-        <p className="mb-2 text-xs font-semibold text-slate-700">Gợi ý nhanh theo tổ hợp hiện tại</p>
-        <div className="flex flex-wrap gap-2">
-          {recommendedTypes.map((type) => {
-            const option = CHART_TYPE_OPTIONS.find((item) => item.value === type)
-            if (!option) {
-              return null
-            }
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-900">
+           <Box size={10} className="text-amber-600 flex-shrink-0" />
+           <p className="text-[9px] font-medium leading-tight">
+             Trục X: chiều đầu tiên. Trục Y: giá trị chỉ số.
+           </p>
+        </div>
 
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => onChartTypeChange(type)}
-                className={`rounded-full border px-2.5 py-1 text-xs transition ${
-                  chartType === type
-                    ? 'border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-emerald-300 hover:text-emerald-700'
-                }`}
-              >
-                {option.label}
-              </button>
-            )
-          })}
+        <div className="pt-1">
+          <div className="flex flex-wrap gap-1">
+            {recommendedTypes.map((type) => {
+              const option = CHART_TYPE_OPTIONS.find((item) => item.value === type)
+              if (!option) return null
+              const Icon = option.icon
+
+              return (
+                <Badge
+                  key={type}
+                  variant={chartType === type ? "default" : "outline"}
+                  className={`px-2 py-0.5 cursor-pointer transition-all gap-1 text-[9px] font-bold uppercase ${
+                    chartType === type 
+                    ? 'bg-indigo-600 hover:bg-indigo-700 border-transparent' 
+                    : 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                  }`}
+                  onClick={() => onChartTypeChange(type)}
+                >
+                  <Icon size={10} />
+                  <span>{option.label}</span>
+                </Badge>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

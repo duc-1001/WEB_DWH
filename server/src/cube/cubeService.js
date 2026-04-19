@@ -287,7 +287,7 @@ function formatRows(rawRows, measures, dimensionFields = []) {
       const measureValue =
         row[measureUniqueName] ??
         row[measureLabel] ??
-        findValueByKey(row, [measureLabel]);
+        findValueByKey(row, [measureUniqueName, measureLabel]);
 
       values[measureLabel] = toNumericIfPossible(measureValue);
     }
@@ -360,10 +360,20 @@ function buildResolvedFieldFromDimensionLevel(dimension, level) {
   };
 }
 
-function getLocationResolvedField(level) {
+function getLocationResolvedField(level, factGroup) {
   const locationDimension = getDimensionByLabel("DIM LOCATION");
   const storeDimension = getDimensionByLabel("DIM STORE");
+  const isInventory = String(factGroup || "").toLowerCase().includes("inventory");
 
+  if (isInventory) {
+    // CUBE_INVENTORY chi co DIM STORE, khong co DIM LOCATION
+    return (
+      buildResolvedFieldFromDimensionLevel(storeDimension, level) ||
+      buildResolvedFieldFromDimensionLevel(locationDimension, level)
+    );
+  }
+
+  // CUBE_SALES dung DIM LOCATION
   return (
     buildResolvedFieldFromDimensionLevel(locationDimension, level) ||
     buildResolvedFieldFromDimensionLevel(storeDimension, level)
@@ -418,27 +428,25 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
   const isCityAll = isAllValue(filters.city) && filterUsage?.city !== false;
 
   if (hasStateFilter || hasCityFilter) {
-    addField(getLocationResolvedField("STATE"));
+    addField(getLocationResolvedField("STATE", factGroup));
   }
 
   if (hasCityFilter) {
-    addField(getLocationResolvedField("CITY"));
+    addField(getLocationResolvedField("CITY", factGroup));
   }
 
   if (hasLocationKeyFilter) {
-    addField(getLocationResolvedField("LOCATION KEY") || getLocationResolvedField("STORE KEY"));
+    addField(getLocationResolvedField("LOCATION KEY", factGroup) || getLocationResolvedField("STORE KEY", factGroup));
   }
 
   // Cascading expansion for location "all" filters:
-  // - State=all => show all states
-  // - State selected and City=all => show all cities in that state
   if (isStateAll) {
-    const stateField = getLocationResolvedField("STATE");
+    const stateField = getLocationResolvedField("STATE", factGroup);
     if (stateField) {
       addField(stateField);
     }
   } else if (isCityAll) {
-    const cityField = getLocationResolvedField("CITY");
+    const cityField = getLocationResolvedField("CITY", factGroup);
     if (cityField) {
       addField(cityField);
     }
@@ -483,16 +491,33 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
 
   if (isFactSales) {
     if (isYearAll) {
+      // Nam = tat ca → hien tat ca cac nam
       const yearField = getTimeResolvedField("Year");
       if (yearField) addField(yearField);
-    }
-    if (!isQuarterAll) {
-      const quarterField = getTimeResolvedField("Quarter");
-      if (quarterField) addField(quarterField);
-    }
-    if (!isMonthAll) {
-      const monthField = getTimeResolvedField("Month");
-      if (monthField) addField(monthField);
+    } else {
+      // Nam cu the → luon them Year
+      const yearField = getTimeResolvedField("Year");
+      if (yearField) addField(yearField);
+
+      if (isQuarterAll) {
+        // Nam cu the + Quy = tat ca → cascading: hien tat ca quy trong nam
+        const quarterField = getTimeResolvedField("Quarter");
+        if (quarterField) addField(quarterField);
+      } else {
+        // Quy cu the → them Quarter
+        const quarterField = getTimeResolvedField("Quarter");
+        if (quarterField) addField(quarterField);
+
+        if (isMonthAll) {
+          // Quy cu the + Thang = tat ca → cascading: hien tat ca thang trong quy
+          const monthField = getTimeResolvedField("Month");
+          if (monthField) addField(monthField);
+        } else {
+          // Thang cu the
+          const monthField = getTimeResolvedField("Month");
+          if (monthField) addField(monthField);
+        }
+      }
     }
   } else {
     // Cascading expansion for "all" filters (Fact Inventory & others):
@@ -519,12 +544,31 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
   return resolved;
 }
 
-function resolveMeasures(requestedMeasures) {
-  const allowedMeasures = getAllMeasures();
-  if (!Array.isArray(requestedMeasures) || requestedMeasures.length === 0) {
-    return getDefaultMeasures();
+function resolveMeasures(requestedMeasures, factGroup) {
+  let fallbackMeasures = getDefaultMeasures();
+  
+  if (factGroup) {
+    const normalizedGroup = String(factGroup).toLowerCase();
+    const isInventory = normalizedGroup.includes("inventory");
+    const isSales = normalizedGroup.includes("sales");
+    
+    const targetGroup = cubeDefinition.measureGroups.find(g => {
+      const name = String(g.name).toLowerCase();
+      if (isInventory && name.includes("inventory")) return true;
+      if (isSales && name.includes("sales")) return true;
+      return false;
+    });
+    
+    if (targetGroup && Array.isArray(targetGroup.measures) && targetGroup.measures.length > 0) {
+      fallbackMeasures = targetGroup.measures;
+    }
   }
 
+  if (!Array.isArray(requestedMeasures) || requestedMeasures.length === 0) {
+    return fallbackMeasures.map(item => normalizeMeasureName(item));
+  }
+
+  const allowedMeasures = getAllMeasures();
   const allowed = new Set(allowedMeasures.map((item) => normalizeMeasureName(item)));
   const normalized = requestedMeasures.map((item) => normalizeMeasureName(item));
 
@@ -581,7 +625,7 @@ async function fetchCubeSlice({ factGroup = "", hierarchy, path = [], measures =
   const cleanedFilters = cleanFilters(filters);
   const selectedFields = ensureFilterDimensionFields(requestedFields, cleanedFilters, filterUsage, factGroup);
 
-  const selectedMeasures = resolveMeasures(measures);
+  const selectedMeasures = resolveMeasures(measures, factGroup);
   if (selectedMeasures.length === 0) {
     throw new Error("No valid measures selected");
   }

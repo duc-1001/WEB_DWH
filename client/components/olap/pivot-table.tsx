@@ -131,8 +131,8 @@ export function PivotTable() {
     return csv
   }
 
-  const getRowValues = () => {
-    const seen = new Set()
+  const getRowValues = (): string[] => {
+    const seen = new Set<string>()
     data.forEach(d => {
       const key = getRowKey(d)
       if (!seen.has(key)) {
@@ -142,8 +142,8 @@ export function PivotTable() {
     return Array.from(seen).sort()
   }
 
-  const getColumnValues = () => {
-    const seen = new Set()
+  const getColumnValues = (): string[] => {
+    const seen = new Set<string>()
     data.forEach(d => {
       const key = getColumnKey(d)
       if (!seen.has(key)) {

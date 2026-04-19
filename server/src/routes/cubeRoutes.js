@@ -290,7 +290,27 @@ function getTimeField(level) {
   };
 }
 
-function getLocationField(level) {
+function getLocationField(level, factGroup) {
+  const isInventory = String(factGroup || "").toLowerCase().includes("inventory");
+
+  if (isInventory) {
+    // CUBE_INVENTORY dung DIM STORE, khong co DIM LOCATION
+    const storeDimension =
+      cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM STORE") ||
+      cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM LOCATION");
+    if (!storeDimension || !Array.isArray(storeDimension.levels) || !storeDimension.levels.includes(level)) {
+      return null;
+    }
+    return {
+      hierarchy: storeDimension.hierarchy,
+      level,
+      dimensionLabel: storeDimension.label,
+      label: `${storeDimension.label} / ${level}`,
+      name: `${storeDimension.label} / ${level}`,
+    };
+  }
+
+  // CUBE_SALES dung DIM LOCATION
   const locationDimension =
     cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM LOCATION") ||
     cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM STORE");
@@ -414,8 +434,8 @@ async function handleLocationOptions(req, res) {
       : req.body;
 
     const { filters, factGroup, filterUsage } = normalizeQueryPayload(payload);
-    const stateField = getLocationField("STATE");
-    const cityField = getLocationField("CITY");
+    const stateField = getLocationField("STATE", factGroup);
+    const cityField = getLocationField("CITY", factGroup);
 
     if (!stateField || !cityField) {
       return res.json({ states: [], citiesByState: {} });

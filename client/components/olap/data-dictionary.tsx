@@ -19,6 +19,7 @@ const DATA_METADATA: MetadataItem[] = [
   { name: 'Year', type: 'dimension', description: 'Calendar year for the transaction' },
   { name: 'Product Category', type: 'dimension', description: 'Main product category classification' },
   { name: 'Customer Segment', type: 'dimension', description: 'Customer classification (Premium, Standard, Basic)' },
+  { name: 'Customer Key', type: 'dimension', description: 'Unique identifier for the customer' },
   // Measures
   { name: 'Sales', type: 'measure', description: 'Total sales revenue', format: 'Currency ($)' },
   { name: 'Orders', type: 'measure', description: 'Number of orders placed', format: 'Integer' },

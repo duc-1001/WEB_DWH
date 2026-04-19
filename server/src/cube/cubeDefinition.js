@@ -31,14 +31,12 @@ const cubeDefinition = {
     {
       name: "Fact Inventory",
       measures: [
-        "[Measures].[Fact Inventory Count]",
         "[Measures].[Quantity On Hand]",
       ],
     },
     {
       name: "Fact Sales",
       measures: [
-        "[Measures].[Fact Sales Count]",
         "[Measures].[Quantity Ordered]",
         "[Measures].[Total Amount]",
       ],

@@ -1,34 +1,34 @@
 import { ChartDisplayPanel } from './chart-display-panel'
 import { MeasureChartConfigPanel } from './measure-chart-config'
 import type { ChartType } from './measure-chart-config'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Plus, 
+  Search, 
+  X, 
+  ChevronDown, 
+  Layers, 
+  Filter,
+  MoreHorizontal
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
+import {
+  FactKey,
+  DimensionMeta,
+  MeasureMeta,
+  FilterState,
+  CubeRow,
+} from '../../types/olap'
+import { JSX } from 'react/jsx-dev-runtime'
 
-type FactKey = 'fact_sales' | 'fact_inventory'
-
-type DimensionMeta = {
-  name: string
-  hierarchy: string[]
-  hierarchyUniqueName: string
-}
-
-type MeasureMeta = {
-  name: string
-  uniqueName: string
-}
-
-type FilterState = {
-  year: string
-  quarter: string
-  month: string
-  state: string
-  city: string
-  customerType: string
-  productKey: string
-}
-
-type CubeRow = {
-  dimensions: Record<string, string>
-  measures: Record<string, number | string>
-}
 
 type TableColumn = {
   key: string
@@ -109,19 +109,21 @@ export function FactPanelBase({
     <section className="flex-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:p-4">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-slate-800">Cấu hình dữ liệu</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {(Object.keys(factConfig) as FactKey[]).map((factKey) => (
-            <button
+            <Button
               key={factKey}
+              variant={activeFact === factKey ? "default" : "outline"}
+              size="sm"
               onClick={() => setActiveFact(factKey)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition ${
+              className={`h-8 px-4 text-[11px] font-semibold transition-all ${
                 activeFact === factKey
-                  ? 'border-emerald-700 bg-emerald-700 text-white'
-                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  ? 'bg-emerald-700 hover:bg-emerald-800'
+                  : 'bg-white text-slate-600 border-slate-200'
               }`}
             >
               {factConfig[factKey].label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -130,155 +132,152 @@ export function FactPanelBase({
         <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700">{activeState.errorMessage}</div>
       ) : null}
 
-      <div>
-        <div className="rounded-xl border border-slate-200 p-2.5">
-          <h3 className="mb-2 text-xs font-semibold text-slate-800">Chiều dữ liệu - {factConfig[activeFact].label}</h3>
-          {activeState.metaLoading ? (
-            <div className="mb-3 space-y-2">
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-8 w-full" />
+      <div className="space-y-4">
+        {activeState.metaLoading ? (
+          <div className="space-y-2 px-1">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        ) : null}
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-slate-100 bg-slate-50/50 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded-md bg-emerald-100 text-emerald-700">
+                <Layers size={14} />
+              </div>
+              <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-tight">Thuộc tính phân tích</h3>
             </div>
-          ) : null}
-          <div className="mb-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-2.5">
-            <div className="mb-2 flex items-center justify-between gap-2 text-xs font-medium text-slate-600">
-              <span>Chiều đang bật</span>
-              <select
-                value=""
-                onChange={(event) => {
-                  const dimensionName = event.target.value
-                  if (dimensionName) {
-                    toggleDimension(dimensionName)
-                    event.currentTarget.value = ''
-                  }
-                }}
-                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none"
-              >
-                <option value="">Thêm chiều</option>
-                {availableDimensionOptions.map((dimension) => (
-                  <option key={dimension.name} value={dimension.name}>
-                    {formatDimLabel(dimension.name)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2">
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-[10px] font-bold uppercase border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-100 transition-all shadow-none">
+                  <Plus size={12} />
+                  <span>Thêm thuộc tính</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {availableDimensionOptions.length > 0 ? (
+                  availableDimensionOptions.map((dimension) => (
+                    <DropdownMenuItem 
+                      key={dimension.name} 
+                      onClick={() => toggleDimension(dimension.name)}
+                      className="gap-2 cursor-pointer text-xs py-2"
+                    >
+                      <span className="font-medium">{formatDimLabel(dimension.name)}</span>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Tất cả đã chọn</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="p-2 bg-slate-50/30">
+            <div className="flex flex-wrap gap-1.5 min-h-[1.5rem] items-center">
               {activeState.selectedDimensions.length > 0 ? (
                 activeState.selectedDimensions.map((dimensionName) => (
-                  <button
+                  <Badge 
                     key={dimensionName}
-                    type="button"
-                    onClick={() => toggleDimension(dimensionName)}
-                    className="rounded-full border border-emerald-700 bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-800"
+                    variant="secondary"
+                    className="pl-2.5 pr-1 py-0.5 gap-1 border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 transition-colors cursor-default group shadow-sm"
                   >
-                    {formatDimLabel(dimensionName)}
-                  </button>
+                    <span className="text-[10px] font-bold uppercase">{formatDimLabel(dimensionName)}</span>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleDimension(dimensionName);
+                      }}
+                      className="p-0.5 rounded-full hover:bg-emerald-100 text-emerald-600 transition-colors"
+                    >
+                      <X size={10} />
+                    </button>
+                  </Badge>
                 ))
               ) : (
-                <span className="text-xs text-slate-500">Chưa chọn chiều nào.</span>
+                <p className="text-[10px] text-slate-400 italic px-1">Chưa chọn chiều dữ liệu</p>
               )}
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3">
-            {activeState.dimensions
-              .filter((dimension) => activeState.selectedDimensions.includes(dimension.name))
-              .map((dimension) => {
-                const selectedLevelIndexes = getNormalizedLevelIndexes(dimension, activeState.currentLevels[dimension.name])
-                const allowedLevelIndexes = getAllowedLevelIndexes(dimension)
-                const isDimensionSelected = selectedLevelIndexes.length > 0
-                const selectedLevelLabels = getSelectedLevelLabels(dimension, selectedLevelIndexes)
-                const memberSearchQueries = activeState.memberSearchQueries || {}
-                return (
-                  <div
-                    key={dimension.name}
-                    className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-2.5 text-xs font-medium text-slate-700">
-                      <span className="flex-1 leading-5">
-                        <span className="block text-xs font-semibold text-slate-800">{formatDimLabel(dimension.name)}</span>
-                        <span className="block text-xs text-slate-500">Không bắt buộc chọn, chỉ chọn level khi cần drill-down</span>
-                      </span>
-                      {isDimensionSelected ? (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow-sm">
-                          {selectedLevelIndexes.length} cấp
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-2.5 space-y-2.5 rounded-2xl border border-slate-100 bg-slate-50 p-2.5">
-                      {selectedLevelLabels.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {selectedLevelLabels.map((label) => (
-                            <span
-                              key={label}
-                              className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {allowedLevelIndexes.length > 0 ? (
-                          allowedLevelIndexes.map((index) => {
-                            const level = dimension.hierarchy[index]
-                            const checked = selectedLevelIndexes.includes(index)
-                            return (
-                              <label
-                                key={level}
-                                className="flex cursor-pointer items-center gap-2 rounded-xl border border-transparent bg-white px-2.5 py-1.5 text-xs text-slate-700 transition hover:border-emerald-100 hover:bg-emerald-50"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                                  onChange={() => toggleDimensionLevel(dimension.name, index)}
-                                />
-                                <span className="truncate">{level}</span>
-                              </label>
-                            )
-                          })
-                        ) : (
-                          <p className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-                            Không có cấp dữ liệu phù hợp.
-                          </p>
-                        )}
-                      </div>
+        </div>
 
-                      {selectedLevelIndexes.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                          {selectedLevelIndexes.map((levelIndex) => {
-                            const levelName = dimension.hierarchy[levelIndex]
-                            const fieldKey = getDimensionFieldKey(dimension, levelIndex)
-                            const memberQueryKey = `${dimension.name}::${levelIndex}`
-
-                            return (
-                              <div key={fieldKey} className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div>
-                                    <div className="text-xs font-semibold text-slate-800">{levelName}</div>
-                                    <div className="text-xs text-slate-500">Nhập thủ công giá trị member để lọc</div>
-                                  </div>
-                                </div>
-                                <input
-                                  value={memberSearchQueries[memberQueryKey] || ''}
-                                  onChange={(event) => updateMemberSearchQuery(dimension.name, levelIndex, event.target.value)}
-                                  className="mt-2 h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs outline-none transition focus:border-emerald-500"
-                                  placeholder={`Nhập member ${levelName}`}
-                                />
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : null}
+        <div className="grid grid-cols-1 gap-2">
+          {activeState.dimensions
+            .filter((dimension) => activeState.selectedDimensions.includes(dimension.name))
+            .map((dimension) => {
+              const selectedLevelIndexes = getNormalizedLevelIndexes(dimension, activeState.currentLevels[dimension.name])
+              const allowedLevelIndexes = getAllowedLevelIndexes(dimension)
+              const isDimensionSelected = selectedLevelIndexes.length > 0
+              const selectedLevelLabels = getSelectedLevelLabels(dimension, selectedLevelIndexes)
+              const memberSearchQueries = activeState.memberSearchQueries || {}
+              return (
+                <div
+                  key={dimension.name}
+                  className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:border-emerald-200"
+                >
+                  <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
+                    <div className="flex items-center gap-2">
+                       <span className="text-[11px] font-bold text-slate-800 uppercase">{formatDimLabel(dimension.name)}</span>
                     </div>
+                    <button
+                      onClick={() => toggleDimension(dimension.name)}
+                      className="p-1 rounded-md text-slate-400 hover:bg-slate-100 transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
-                )
-              })}
-            {activeState.selectedDimensions.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
-                Chưa chọn chiều nào để hiển thị.
-              </div>
-            ) : null}
-          </div>
+                  
+                  <div className="space-y-2 rounded-lg border border-slate-50 bg-slate-50/50 p-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {allowedLevelIndexes.map((index) => {
+                        const level = dimension.hierarchy[index]
+                        const checked = selectedLevelIndexes.includes(index)
+                        return (
+                          <button
+                            key={level}
+                            onClick={() => toggleDimensionLevel(dimension.name, index)}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${
+                              checked 
+                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm' 
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
+                            }`}
+                          >
+                            <span className="truncate">{level}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {selectedLevelIndexes.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-200/50">
+                        {selectedLevelIndexes.map((levelIndex) => {
+                          const levelName = dimension.hierarchy[levelIndex]
+                          const fieldKey = getDimensionFieldKey(dimension, levelIndex)
+                          const memberQueryKey = `${dimension.name}::${levelIndex}`
+
+                          return (
+                            <div key={fieldKey} className="relative group">
+                              <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                              <input
+                                value={memberSearchQueries[memberQueryKey] || ''}
+                                onChange={(event) => updateMemberSearchQuery(dimension.name, levelIndex, event.target.value)}
+                                className="h-7 w-full rounded-md border border-slate-200 bg-white pl-8 pr-2 text-[10px] outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
+                                placeholder={`Lọc theo ${levelName}...`}
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          {activeState.selectedDimensions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/20 text-center">
+               <p className="text-[11px] text-slate-400 font-medium">Vui lòng chọn ít nhất một chiều dữ liệu</p>
+            </div>
+          ) : null}
         </div>
 
         <MeasureChartConfigPanel
