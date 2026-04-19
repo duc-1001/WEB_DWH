@@ -28,6 +28,8 @@ const config = {
   cubeServerName: normalizeConnectionValue(process.env.CUBE_SERVER_NAME),
   cubeDatabaseName: normalizeConnectionValue(process.env.CUBE_DATABASE_NAME),
   cubeName: normalizeConnectionValue(process.env.CUBE_NAME),
+  cubeSalesName: normalizeConnectionValue(process.env.CUBE_SALES_NAME) || "CUBE_SALES",
+  cubeInventoryName: normalizeConnectionValue(process.env.CUBE_INVENTORY_NAME) || "CUBE_INVENTORY",
 };
 
 module.exports = { config };

@@ -17,6 +17,17 @@ function toNumericIfPossible(value) {
   return Number.isFinite(num) ? num : value;
 }
 
+function getCubeName(factGroup) {
+  const normalized = String(factGroup || "").toLowerCase();
+  if (normalized.includes("inventory")) {
+    return config.cubeInventoryName;
+  }
+  if (normalized.includes("sales")) {
+    return config.cubeSalesName;
+  }
+  return config.cubeName || config.cubeSalesName;
+}
+
 function findValueByKey(row, candidateKeys) {
   const normalizedEntries = Object.keys(row).map((key) => ({
     key,
@@ -575,8 +586,10 @@ async function fetchCubeSlice({ factGroup = "", hierarchy, path = [], measures =
     throw new Error("No valid measures selected");
   }
 
+  const resolvedCubeName = getCubeName(factGroup);
+
   const baseQueryInput = {
-    cubeName: config.cubeName,
+    cubeName: resolvedCubeName,
     hierarchy: selectedFields[0]?.hierarchy || hierarchyDefinition.hierarchy,
     path,
     measures: selectedMeasures,
@@ -596,7 +609,7 @@ async function fetchCubeSlice({ factGroup = "", hierarchy, path = [], measures =
     }
 
     const validFields = await probeValidFields({
-      cubeName: config.cubeName,
+      cubeName: resolvedCubeName,
       hierarchy: baseQueryInput.hierarchy,
       path,
       measures: selectedMeasures,
