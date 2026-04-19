@@ -9,7 +9,9 @@ function validateConnectionConfig() {
 
 function createConnection() {
   validateConnectionConfig();
-  const connectionString = `Provider=MSOLAP;Data Source=${config.cubeServerName};Initial Catalog=${config.cubeDatabaseName};User ID=${config.dbUser};Password=${config.dbPass};`;
+  // Using Integrated Security=SSPI for Windows Authentication (standard for SSAS)
+  const connectionString = `Provider=MSOLAP;Data Source=${config.cubeServerName};Initial Catalog=${config.cubeDatabaseName};Integrated Security=SSPI;`;
+  
   const use64BitCscript = process.arch === "x64";
   return ADODB.open(connectionString, use64BitCscript);
 }
