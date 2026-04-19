@@ -53,7 +53,7 @@ export function FilterSidebar({
       <div className="border-b border-emerald-300/70 px-5 py-4">
         <div className="flex items-center gap-2 text-[40px] font-semibold leading-none text-emerald-800">
           <FilterIcon size={22} />
-          <h1 className="text-2xl">BỘ LỌC</h1>
+          <h1 className="text-xl">BỘ LỌC</h1>
         </div>
       </div>
 

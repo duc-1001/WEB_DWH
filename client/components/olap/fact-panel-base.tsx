@@ -133,8 +133,8 @@ export function FactPanelBase({
               size="sm"
               onClick={() => setActiveFact(factKey)}
               className={`h-8 px-4 text-[11px] font-semibold transition-all ${activeFact === factKey
-                  ? 'bg-emerald-700 hover:bg-emerald-800'
-                  : 'bg-white text-slate-600 border-slate-200'
+                ? 'bg-emerald-700 hover:bg-emerald-800'
+                : 'bg-white text-slate-600 border-slate-200'
                 }`}
             >
               {factConfig[factKey].label}
@@ -272,8 +272,8 @@ export function FactPanelBase({
                             key={level}
                             onClick={() => toggleDimensionLevel(dimension.name, index)}
                             className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${checked
-                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
+                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
                               }`}
                           >
                             <span className="truncate">{level}</span>
@@ -361,11 +361,16 @@ export function FactPanelBase({
                   </thead>
                   <tbody>
                     {filteredRows.map((row, rowIndex) => (
-                      <tr key={`${rowIndex}-${row.dimensions[tableColumns[0]?.key || ''] || 'row'}`} className="hover:bg-emerald-50/30 transition-colors border-b border-slate-50 last:border-0">
-                        {tableColumns.map((column) => (
-                          <td key={`${rowIndex}-${column.key}`} className="px-4 py-2 text-slate-600">
-                            {column.source === 'filter'
-                              ? column.key === 'year'
+                      <tr
+                        key={rowIndex}
+                        className="hover:bg-emerald-50/30 transition-colors border-b border-slate-50 last:border-0"
+                      >
+                        {tableColumns.map((column) => {
+                          let value = '-'
+
+                          if (column.source === 'filter') {
+                            value =
+                              column.key === 'year'
                                 ? activeState.filters.year
                                 : column.key === 'quarter'
                                   ? activeState.filters.quarter
@@ -380,12 +385,31 @@ export function FactPanelBase({
                                           : column.key === 'productKey'
                                             ? activeState.filters.productKey
                                             : '-'
-                              : row.dimensions[column.key] || '-'}
-                          </td>
-                        ))}
+                          } else {
+                            const dimKeys = Object.keys(row.dimensions || {})
+                            const foundKey = dimKeys.find((k) =>
+                              k.toLowerCase().includes(column.key.toLowerCase())
+                            )
+
+                            value = foundKey ? row.dimensions[foundKey] : '-'
+                          }
+
+                          return (
+                            <td
+                              key={`${rowIndex}-${column.key}`}
+                              className="px-4 py-2 text-slate-600"
+                            >
+                              {value}
+                            </td>
+                          )
+                        })}
+
                         {activeState.selectedMeasures.map((measure) => (
-                          <td key={`${rowIndex}-${measure}`} className="px-4 py-2 text-right font-semibold text-slate-900 tabular-nums">
-                            {Number(row.measures[measure] || 0).toLocaleString('vi-VN')}
+                          <td
+                            key={`${rowIndex}-${measure}`}
+                            className="px-4 py-2 text-right font-semibold text-slate-900 tabular-nums"
+                          >
+                            {Number(row.measures?.[measure] || 0).toLocaleString('vi-VN')}
                           </td>
                         ))}
                       </tr>

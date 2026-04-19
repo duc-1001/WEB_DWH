@@ -400,33 +400,34 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
   const seen = new Set(resolved.map((field) => field.key));
 
   const addField = (field) => {
-    if (!field || seen.has(field.key)) {
-      return;
-    }
+    if (!field || seen.has(field.key)) return;
     seen.add(field.key);
     resolved.push(field);
   };
 
-  const hasStateFilter = isActiveFilterValue(filters.state);
-  const hasCityFilter = isActiveFilterValue(filters.city);
-  const hasLocationKeyFilter = isActiveFilterValue(filters.locationKey) || isActiveFilterValue(filters.storeKey);
-  const hasYearFilter = isActiveFilterValue(filters.year);
-  const hasQuarterFilter = isActiveFilterValue(filters.quarter);
-  const hasMonthFilter = isActiveFilterValue(filters.month);
-  const hasCustomerTypeFilter = isActiveFilterValue(filters.customerType);
-  const hasProductKeyFilter = isActiveFilterValue(filters.productKey);
   const normalizeFilter = (value) => String(value || "").trim().toLowerCase();
+
   const isAllValue = (value) => {
     const normalized = normalizeFilter(value);
     return !normalized || normalized === "all" || normalized === "tat ca" || normalized === "tất cả";
   };
 
+  const hasStateFilter = isActiveFilterValue(filters.state);
+  const hasCityFilter = isActiveFilterValue(filters.city);
+  const hasLocationKeyFilter =
+    isActiveFilterValue(filters.locationKey) || isActiveFilterValue(filters.storeKey);
+
+  const hasCustomerTypeFilter = isActiveFilterValue(filters.customerType);
+  const hasProductKeyFilter = isActiveFilterValue(filters.productKey);
+
   const isYearAll = isAllValue(filters.year) && filterUsage?.year !== false;
   const isQuarterAll = isAllValue(filters.quarter) && filterUsage?.quarter !== false;
   const isMonthAll = isAllValue(filters.month) && filterUsage?.month !== false;
+
   const isStateAll = isAllValue(filters.state) && filterUsage?.state !== false;
   const isCityAll = isAllValue(filters.city) && filterUsage?.city !== false;
 
+  // LOCATION
   if (hasStateFilter || hasCityFilter) {
     addField(getLocationResolvedField("STATE", factGroup));
   }
@@ -436,93 +437,63 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
   }
 
   if (hasLocationKeyFilter) {
-    addField(getLocationResolvedField("LOCATION KEY", factGroup) || getLocationResolvedField("STORE KEY", factGroup));
+    addField(
+      getLocationResolvedField("LOCATION KEY", factGroup) ||
+      getLocationResolvedField("STORE KEY", factGroup)
+    );
   }
 
-  // Cascading expansion for location "all" filters:
+  // location cascade
   if (isStateAll) {
     const stateField = getLocationResolvedField("STATE", factGroup);
-    if (stateField) {
-      addField(stateField);
-    }
+    if (stateField) addField(stateField);
   } else if (isCityAll) {
     const cityField = getLocationResolvedField("CITY", factGroup);
-    if (cityField) {
-      addField(cityField);
-    }
+    if (cityField) addField(cityField);
   }
 
-  if (hasYearFilter || hasQuarterFilter || hasMonthFilter) {
-    const yearField = getTimeResolvedField("Year");
-    if (yearField) {
-      addField(yearField);
-    }
-  }
-
-  if (hasQuarterFilter || hasMonthFilter) {
-    const quarterField = getTimeResolvedField("Quarter");
-    if (quarterField) {
-      addField(quarterField);
-    }
-  }
-
-  if (hasMonthFilter) {
-    const monthField = getTimeResolvedField("Month");
-    if (monthField) {
-      addField(monthField);
-    }
-  }
-
+  // CUSTOMER TYPE
   if (hasCustomerTypeFilter) {
     const customerTypeField = getCustomerTypeResolvedField();
-    if (customerTypeField) {
-      addField(customerTypeField);
-    }
+    if (customerTypeField) addField(customerTypeField);
   }
 
+  // PRODUCT
   if (hasProductKeyFilter) {
-    const productKeyField = getProductResolvedField("PRODUCT KEY") || getProductResolvedField("DESCRIPTION");
-    if (productKeyField) {
-      addField(productKeyField);
-    }
+    const productKeyField =
+      getProductResolvedField("PRODUCT KEY") ||
+      getProductResolvedField("DESCRIPTION");
+
+    if (productKeyField) addField(productKeyField);
   }
+
+  // =========================
+  // TIME CASCADE (FIXED)
+  // =========================
+
+  const yearField = getTimeResolvedField("Year");
+  const quarterField = getTimeResolvedField("Quarter");
+  const monthField = getTimeResolvedField("Month");
 
   const isFactSales = String(factGroup).toLowerCase().includes("sales");
 
-  if (isFactSales) {
-    if (isYearAll) {
-      addField(getTimeResolvedField("Year"));
-    } else {
-      addField(getTimeResolvedField("Year"));
-      if (isQuarterAll) {
-        addField(getTimeResolvedField("Quarter"));
-      } else {
-        addField(getTimeResolvedField("Quarter"));
-        if (isMonthAll) {
-          addField(getTimeResolvedField("Month"));
-        } else {
-          addField(getTimeResolvedField("Month"));
-        }
-      }
-    }
-  } else {
-    // Fact Inventory & others
-    if (isYearAll) {
-      addField(getTimeResolvedField("Year"));
-    } else {
-      addField(getTimeResolvedField("Year"));
-      if (isQuarterAll) {
-        addField(getTimeResolvedField("Quarter"));
-      } else {
-        addField(getTimeResolvedField("Quarter"));
-        if (isMonthAll) {
-          addField(getTimeResolvedField("Month"));
-        } else {
-          addField(getTimeResolvedField("Month"));
-          // Inventory often needs daily tracking
-          const timeKeyField = getTimeResolvedField("Time Key");
-          if (timeKeyField) addField(timeKeyField);
-        }
+  // luôn có Year
+  if (yearField && filterUsage?.year !== false) {
+    addField(yearField);
+  }
+
+  // nếu year không phải ALL thì mới mở Quarter
+  if (!isYearAll && quarterField && filterUsage?.quarter !== false) {
+    addField(quarterField);
+
+    // nếu quarter không phải ALL thì mới mở Month
+    if (!isQuarterAll && monthField && filterUsage?.month !== false) {
+      addField(monthField);
+
+      // Inventory cần thêm Time Key
+      if (!isFactSales) {
+        const timeKeyField = getTimeResolvedField("Time Key");
+        if (timeKeyField) addField(timeKeyField);
       }
     }
   }

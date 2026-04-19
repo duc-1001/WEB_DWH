@@ -1,9 +1,9 @@
-import { 
-  DimensionMeta, 
-  FilterState, 
-  FilterUsageState, 
-  TableColumn, 
-  CubeRow, 
+import {
+  DimensionMeta,
+  FilterState,
+  FilterUsageState,
+  TableColumn,
+  CubeRow,
   FactKey,
   FactState
 } from '../types/olap'
@@ -82,14 +82,18 @@ export const MONTH_OPTIONS = [
 ]
 
 export const DIMENSION_ALLOWED_LEVELS: Record<string, string[]> = {
-  'DIM CUSTOMER': ['CUSTOMER NAME', 'CUSTOMER TYPE', 'CITY', 'STATE'],
-  'DIM STORE': ['STORE KEY', 'CITY', 'STATE'],
-  'DIM LOCATION': ['LOCATION KEY', 'CITY', 'STATE'],
-  'DIM PRODUCT': ['PRODUCT KEY', 'DESCRIPTION'],
+  'DIM CUSTOMER': ['CUSTOMER NAME'],
+  'DIM STORE': ['STORE KEY'],
+  'DIM PRODUCT': ['PRODUCT KEY'],
 }
 
-
-
+export const DIMENSION_ALLOWED_TABLE_LEVELS: Record<string, string[]> = {
+  'DIM CUSTOMER': ['CUSTOMER NAME'],
+  'DIM STORE': ['STORE KEY',"STATE","CITY"],
+  "DIM LOCATION": ["STATE", "CITY"],
+  "DIM TIME": ["YEAR", "QUARTER", "MONTH"],
+  'DIM PRODUCT': ['PRODUCT KEY'],
+}
 
 
 export function getAllowedLevelIndexes(dimension: DimensionMeta) {
@@ -168,10 +172,10 @@ export function getEffectiveFilters(filters: FilterState, filterUsage: FilterUsa
     year: filterUsage.year ? filters.year : 'all',
     quarter: filterUsage.quarter ? filters.quarter : 'all',
     month: filterUsage.month ? filters.month : 'all',
-    state: filterUsage.state ? filters.state : '',
-    city: filterUsage.city ? filters.city : '',
+    state: filterUsage.state ? filters.state : 'all',
+    city: filterUsage.city ? filters.city : 'all',
     customerType: filterUsage.customerType ? filters.customerType : 'all',
-    productKey: filterUsage.productKey ? filters.productKey : '',
+    productKey: filterUsage.productKey ? filters.productKey : 'all',
   }
 }
 
@@ -181,21 +185,31 @@ export function getTableColumnsForFilters(filters: FilterState, filterUsage: Fil
   const normalizedRowColumns = rowColumns.map((column) => String(column || '').trim().toLowerCase())
 
   const hasDimensionColumnForFilter = (filterKey: string) => {
+    const normalizedFilter = filterKey.toLowerCase().replace(/\s+/g, '')
+
     return rowColumns.some((column) => {
-      const normalized = String(column || '').trim().toLowerCase()
-      const matches = normalized === filterKey || normalized.endsWith('/ ' + filterKey)
-      if (!matches) return false
-      
+      if (!column) return false
+
       const segments = column.split('/')
       const dimName = segments[0].trim().toUpperCase()
+
       const rawLevelName = segments[segments.length - 1].trim()
       const normalizedLevelName = rawLevelName.toLowerCase().replace(/\s+/g, '')
-      
-      const allowedForDim = DIMENSION_ALLOWED_LEVELS[dimName]
+
+      // level phải khớp filter
+      if (normalizedLevelName !== normalizedFilter) return false
+
+      // kiểm tra restriction nếu dimension có rule
+      const allowedForDim = DIMENSION_ALLOWED_TABLE_LEVELS[dimName]
+
       if (allowedForDim) {
-        const normalizedAllowed = allowedForDim.map(name => name.toLowerCase().replace(/\s+/g, ''))
+        const normalizedAllowed = allowedForDim.map(level =>
+          level.toLowerCase().replace(/\s+/g, '')
+        )
+
         return normalizedAllowed.includes(normalizedLevelName)
       }
+
       return true
     })
   }
@@ -257,28 +271,28 @@ export function getTableColumnsForFilters(filters: FilterState, filterUsage: Fil
   )
 
   for (const column of rowColumns) {
-    if (columns.some((item) => item.key === column)) continue
-    
+    if (columns.some((item) => item.key === column)) continue;
+
     const normalizedCol = column.toLowerCase().replace(/\s+/g, '')
     const segments = column.split('/')
-    
+
     // Determine dimension name and level name for restriction check
     const dimName = segments[0].trim().toUpperCase()
     const rawLevelName = segments[segments.length - 1].trim()
     const normalizedLevelName = rawLevelName.toLowerCase().replace(/\s+/g, '')
-    
-    // Apply restriction only if the dimension is listed in DIMENSION_ALLOWED_LEVELS
-    const allowedForDim = DIMENSION_ALLOWED_LEVELS[dimName]
+
+    // Apply restriction only if the dimension is listed in DIMENSION_ALLOWED_TABLE_LEVELS
+    const allowedForDim = DIMENSION_ALLOWED_TABLE_LEVELS[dimName]
     if (allowedForDim) {
       const normalizedAllowed = allowedForDim.map(name => name.toLowerCase().replace(/\s+/g, ''))
       if (!normalizedAllowed.includes(normalizedLevelName)) {
         continue
       }
     }
-    
+
     if (addedFilterKeys.has(normalizedCol) || addedFilterKeys.has(normalizedLevelName)) continue
-    
-    columns.push({ key: column, label: formatDimLabel(column), source: 'dimension' })
+
+    columns.push({ key: column, label: formatDimLabel(column), source: 'dimension' });
   }
 
   return columns
