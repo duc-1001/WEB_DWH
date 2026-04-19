@@ -9,7 +9,7 @@ function validateConnectionConfig() {
 
 function createConnection() {
   validateConnectionConfig();
-  const connectionString = `Provider=MSOLAP;Data Source=${config.cubeServerName};Initial Catalog=${config.cubeDatabaseName};`;
+  const connectionString = `Provider=MSOLAP;Data Source=${config.cubeServerName};Initial Catalog=${config.cubeDatabaseName};User ID=${config.dbUser};Password=${config.dbPass};`;
   const use64BitCscript = process.arch === "x64";
   return ADODB.open(connectionString, use64BitCscript);
 }
