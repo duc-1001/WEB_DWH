@@ -152,12 +152,6 @@ export function MeasureChartConfigPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-900">
-           <Box size={10} className="text-amber-600 flex-shrink-0" />
-           <p className="text-[9px] font-medium leading-tight">
-             Trục X: chiều đầu tiên. Trục Y: giá trị chỉ số.
-           </p>
-        </div>
 
         <div className="pt-1">
           <div className="flex flex-wrap gap-1">

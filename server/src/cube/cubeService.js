@@ -491,52 +491,38 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
 
   if (isFactSales) {
     if (isYearAll) {
-      // Nam = tat ca → hien tat ca cac nam
-      const yearField = getTimeResolvedField("Year");
-      if (yearField) addField(yearField);
+      addField(getTimeResolvedField("Year"));
     } else {
-      // Nam cu the → luon them Year
-      const yearField = getTimeResolvedField("Year");
-      if (yearField) addField(yearField);
-
+      addField(getTimeResolvedField("Year"));
       if (isQuarterAll) {
-        // Nam cu the + Quy = tat ca → cascading: hien tat ca quy trong nam
-        const quarterField = getTimeResolvedField("Quarter");
-        if (quarterField) addField(quarterField);
+        addField(getTimeResolvedField("Quarter"));
       } else {
-        // Quy cu the → them Quarter
-        const quarterField = getTimeResolvedField("Quarter");
-        if (quarterField) addField(quarterField);
-
+        addField(getTimeResolvedField("Quarter"));
         if (isMonthAll) {
-          // Quy cu the + Thang = tat ca → cascading: hien tat ca thang trong quy
-          const monthField = getTimeResolvedField("Month");
-          if (monthField) addField(monthField);
+          addField(getTimeResolvedField("Month"));
         } else {
-          // Thang cu the
-          const monthField = getTimeResolvedField("Month");
-          if (monthField) addField(monthField);
+          addField(getTimeResolvedField("Month"));
         }
       }
     }
   } else {
-    // Cascading expansion for "all" filters (Fact Inventory & others):
+    // Fact Inventory & others
     if (isYearAll) {
-      const yearField = getTimeResolvedField("Year");
-      if (yearField) {
-        addField(yearField);
-      }
-    } else if (!isQuarterAll) {
-      if (isMonthAll) {
-        const monthField = getTimeResolvedField("Month");
-        if (monthField) {
-          addField(monthField);
-        }
-      }
+      addField(getTimeResolvedField("Year"));
     } else {
-      const quarterField = getTimeResolvedField("Quarter");
-      if (quarterField) {
-        addField(quarterField);
+      addField(getTimeResolvedField("Year"));
+      if (isQuarterAll) {
+        addField(getTimeResolvedField("Quarter"));
+      } else {
+        addField(getTimeResolvedField("Quarter"));
+        if (isMonthAll) {
+          addField(getTimeResolvedField("Month"));
+        } else {
+          addField(getTimeResolvedField("Month"));
+          // Inventory often needs daily tracking
+          const timeKeyField = getTimeResolvedField("Time Key");
+          if (timeKeyField) addField(timeKeyField);
+        }
       }
     }
   }

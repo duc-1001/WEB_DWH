@@ -622,111 +622,123 @@ export function ChartDisplayPanel({
     | { type: 'pie', id: string, title: string, data: any[], xAxisLabel: string, measureName: string }
     
   const dynamicCharts = useMemo(() => {
-    if (!primaryMeasure || filteredRows.length === 0) return [] as SubChartConfig[];
+    if (selectedMeasures.length === 0 || filteredRows.length === 0) return [] as SubChartConfig[];
     
     const charts: SubChartConfig[] = [];
-    const measureName = formatMeasureLabel(primaryMeasure);
     
-    if (timeColumn && timeKind && mainXAxisKey !== timeColumn.key) {
-      const trendData = aggregateMeasureByTimeAxis(filteredRows, primaryMeasure, filters, timeColumns);
-      if (trendData.length > 1) {
-        charts.push({
-          type: 'trend',
-          id: 'trend-time',
-          title: `Xu hướng ${measureName} theo thời gian`,
-          data: trendData,
-          xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
-          yAxisLabel: measureName,
-          measureName: primaryMeasure
-        });
-      }
-    }
-    
-    for (const categoryCol of categoryColumns) {
-      if (categoryCol.key === mainXAxisKey) continue;
+    // Generate dynamic charts for each selected measure
+    for (const measure of selectedMeasures) {
+      const measureLabel = formatMeasureLabel(measure);
       
-      const distinctCount = getDistinctValueCount(filteredRows, categoryCol, filters);
-      if (distinctCount <= 1) continue;
-      
-      const topNData = aggregateMeasureByColumn(filteredRows, categoryCol, primaryMeasure, filters, 10);
-      if (topNData.length > 0) {
-        const isCustomerOrStore = categoryCol.label.toLowerCase().includes('khách hàng') || categoryCol.label.toLowerCase().includes('customer') || categoryCol.label.toLowerCase().includes('store') || categoryCol.label.toLowerCase().includes('cửa hàng');
-        
-        charts.push({
-          type: 'top-bar',
-          id: `top-${categoryCol.key}`,
-          title: `Top 10 theo ${categoryCol.label} (${measureName})`,
-          data: topNData,
-          xAxisLabel: isCustomerOrStore ? measureName : categoryCol.label,
-          yAxisLabel: isCustomerOrStore ? categoryCol.label : measureName,
-          isVertical: isCustomerOrStore,
-          measureName: primaryMeasure
-        });
+      // 1. Trend Chart (if time dimension exists)
+      if (timeColumn && timeKind && mainXAxisKey !== timeColumn.key) {
+        const trendData = aggregateMeasureByTimeAxis(filteredRows, measure, filters, timeColumns);
+        if (trendData.length > 1) {
+          charts.push({
+            type: 'trend',
+            id: `trend-${measure}-${timeColumn.key}`,
+            title: `Xu hướng ${measureLabel} theo thời gian`,
+            data: trendData,
+            xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
+            yAxisLabel: measureLabel,
+            measureName: measure
+          });
+        }
       }
       
-      if (timeColumn && timeKind) {
-        const top5Categories = aggregateMeasureByColumn(filteredRows, categoryCol, primaryMeasure, filters, 5).map(item => item.name);
+      // 2. Top-N and Category-Time Charts
+      for (const categoryCol of categoryColumns) {
+        if (categoryCol.key === mainXAxisKey) continue;
         
-        if (top5Categories.length > 0) {
-          const timeLabels = aggregateMeasureByTimeAxis(filteredRows, primaryMeasure, filters, timeColumns).map(item => item.name);
-          const byTime = new Map<string, Record<string, number | string>>();
+        const distinctCount = getDistinctValueCount(filteredRows, categoryCol, filters);
+        if (distinctCount <= 1) continue;
+        
+        // Top 10 Bar Chart
+        const topNData = aggregateMeasureByColumn(filteredRows, categoryCol, measure, filters, 10);
+        if (topNData.length > 0) {
+          const isCustomerOrStore = categoryCol.label.toLowerCase().includes('khách hàng') || 
+                                   categoryCol.label.toLowerCase().includes('customer') || 
+                                   categoryCol.label.toLowerCase().includes('store') || 
+                                   categoryCol.label.toLowerCase().includes('cửa hàng');
           
-          for (const label of timeLabels) {
-            const seed: Record<string, number | string> = { label };
-            for (const cat of top5Categories) seed[cat] = 0;
-            byTime.set(label, seed);
-          }
+          charts.push({
+            type: 'top-bar',
+            id: `top-${measure}-${categoryCol.key}`,
+            title: `Top 10 theo ${categoryCol.label} (${measureLabel})`,
+            data: topNData,
+            xAxisLabel: isCustomerOrStore ? measureLabel : categoryCol.label,
+            yAxisLabel: isCustomerOrStore ? categoryCol.label : measureLabel,
+            isVertical: isCustomerOrStore,
+            measureName: measure
+          });
+        }
+        
+        // Top 5 Categories Over Time
+        if (timeColumn && timeKind) {
+          const top5Categories = aggregateMeasureByColumn(filteredRows, categoryCol, measure, filters, 5).map(item => item.name);
           
-          for (const row of filteredRows) {
-             const timeLabel = buildTimeAxisLabel(row, filters, timeColumns);
-             const catValue = getColumnValue(row, categoryCol, filters);
-             if (!top5Categories.includes(catValue)) continue;
-             
-             const numeric = parseMeasureValue(row.measures?.[primaryMeasure]);
-             if (!Number.isFinite(numeric)) continue;
-             
-             const current = byTime.get(timeLabel);
-             if (current) {
-                current[catValue] = Number(current[catValue] || 0) + numeric;
-             }
-          }
-          
-          const catTimeData = Array.from(byTime.values());
-          if (catTimeData.length > 0) {
-             charts.push({
-               type: 'category-time',
-               id: `time-${categoryCol.key}`,
-               title: `Biến động Top 5 ${categoryCol.label} theo thời gian`,
-               data: catTimeData,
-               xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
-               yAxisLabel: measureName,
-               categories: top5Categories,
-               measureName: primaryMeasure
-             });
+          if (top5Categories.length > 0) {
+            const timeLabels = aggregateMeasureByTimeAxis(filteredRows, measure, filters, timeColumns).map(item => item.name);
+            const byTime = new Map<string, Record<string, number | string>>();
+            
+            for (const label of timeLabels) {
+              const seed: Record<string, number | string> = { label };
+              for (const cat of top5Categories) seed[cat] = 0;
+              byTime.set(label, seed);
+            }
+            
+            for (const row of filteredRows) {
+               const timeLabel = buildTimeAxisLabel(row, filters, timeColumns);
+               const catValue = getColumnValue(row, categoryCol, filters);
+               if (!top5Categories.includes(catValue)) continue;
+               
+               const numeric = parseMeasureValue(row.measures?.[measure]);
+               if (!Number.isFinite(numeric)) continue;
+               
+               const current = byTime.get(timeLabel);
+               if (current) {
+                  current[catValue] = Number(current[catValue] || 0) + numeric;
+               }
+            }
+            
+            const catTimeData = Array.from(byTime.values());
+            if (catTimeData.length > 0) {
+               charts.push({
+                 type: 'category-time',
+                 id: `time-${measure}-${categoryCol.key}`,
+                 title: `Biến động Top 5 ${categoryCol.label} theo thời gian (${measureLabel})`,
+                 data: catTimeData,
+                 xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
+                 yAxisLabel: measureLabel,
+                 categories: top5Categories,
+                 measureName: measure
+               });
+            }
           }
         }
       }
-    }
-    
-    if (chartType !== 'pie' && selectedMeasures.length === 1 && chartXAxisColumn) {
-       const distinctCount = getDistinctValueCount(filteredRows, chartXAxisColumn, filters);
-       if (distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
-           const pieData = aggregateMeasureByColumn(filteredRows, chartXAxisColumn, primaryMeasure, filters, 8);
-           if (pieData.length > 0) {
-               charts.push({
-                  type: 'pie',
-                  id: `pie-composition`,
-                  title: `Cơ cấu ${measureName} theo ${chartXAxisColumn.label}`,
-                  data: pieData,
-                  xAxisLabel: chartXAxisColumn.label,
-                  measureName: primaryMeasure
-               });
-           }
-       }
+      
+      // 3. Composition Pie Chart
+      if (chartType !== 'pie' && chartXAxisColumn) {
+         const distinctCount = getDistinctValueCount(filteredRows, chartXAxisColumn, filters);
+         if (distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
+             const pieData = aggregateMeasureByColumn(filteredRows, chartXAxisColumn, measure, filters, 8);
+             if (pieData.length > 0) {
+                 charts.push({
+                    type: 'pie',
+                    id: `pie-${measure}-${chartXAxisColumn.key}`,
+                    title: `Cơ cấu ${measureLabel} theo ${chartXAxisColumn.label}`,
+                    data: pieData,
+                    xAxisLabel: chartXAxisColumn.label,
+                    measureName: measure
+                 });
+             }
+         }
+      }
     }
     
     return charts;
-  }, [filteredRows, primaryMeasure, selectedMeasures.length, timeColumns, categoryColumns, chartXAxisColumn, timeColumn, timeKind, filters, chartType, mainXAxisKey]);
+  }, [filteredRows, selectedMeasures, timeColumns, categoryColumns, chartXAxisColumn, timeColumn, timeKind, filters, chartType, mainXAxisKey]);
 
   const chartTypeLabel =
     chartType === 'line'

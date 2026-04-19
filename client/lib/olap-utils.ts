@@ -82,9 +82,10 @@ export const MONTH_OPTIONS = [
 ]
 
 export const DIMENSION_ALLOWED_LEVELS: Record<string, string[]> = {
-  'DIM CUSTOMER': ['CUSTOMER NAME'],
-  'DIM STORE': ['STORE KEY'],
-  'DIM PRODUCT': ['PRODUCT KEY'],
+  'DIM CUSTOMER': ['CUSTOMER NAME', 'CUSTOMER TYPE', 'CITY', 'STATE'],
+  'DIM STORE': ['STORE KEY', 'CITY', 'STATE'],
+  'DIM LOCATION': ['LOCATION KEY', 'CITY', 'STATE'],
+  'DIM PRODUCT': ['PRODUCT KEY', 'DESCRIPTION'],
 }
 
 
@@ -145,14 +146,16 @@ export function formatDimLabel(value: string) {
     .filter(Boolean)
 
   if (segments.length > 1 && /^dim\b/i.test(segments[0])) {
-    return segments.slice(1).join(' / ')
+    const label = segments.slice(1).join(' / ')
+    return label.replace(/\bTime Key\b/gi, 'Ngày')
   }
 
   if (/^dim\b/i.test(raw)) {
-    return raw.replace(/^dim\s*/i, '').trim()
+    const label = raw.replace(/^dim\s*/i, '').trim()
+    return label.replace(/\bTime Key\b/gi, 'Ngày')
   }
 
-  return raw
+  return raw.replace(/\bTime Key\b/gi, 'Ngày')
 }
 
 export function isAllFilterValue(value: string) {

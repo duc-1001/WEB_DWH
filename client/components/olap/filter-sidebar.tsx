@@ -148,7 +148,7 @@ export function FilterSidebar({
                 value={activeState.filters.state}
                 onChange={(event) => onStateChange(event.target.value)}
                 disabled={!isLocationFilterEnabled}
-                className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
+                className="h-10 max-h-96 overflow-hidden w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
               >
                 <option value="">Tất cả</option>
                 {stateOptions.map((state) => (

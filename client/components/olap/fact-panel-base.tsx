@@ -81,6 +81,8 @@ type FactPanelBaseProps = {
   Skeleton: ({ className }: { className?: string }) => JSX.Element
 }
 
+import React, { useState } from 'react';
+
 export function FactPanelBase({
   activeFact,
   factConfig,
@@ -105,6 +107,13 @@ export function FactPanelBase({
   formatDimLabel,
   Skeleton,
 }: FactPanelBaseProps) {
+  const [dimensionFilter, setDimensionFilter] = useState('');
+  const filteredDimensionOptions = dimensionFilter
+    ? availableDimensionOptions.filter((dimension) =>
+        formatDimLabel(dimension.name).toLowerCase().includes(dimensionFilter.toLowerCase())
+      )
+    : availableDimensionOptions;
+
   return (
     <section className="flex-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:p-4">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -150,22 +159,42 @@ export function FactPanelBase({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-[10px] font-bold uppercase border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-100 transition-all shadow-none">
+                <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-[10px] font-bold uppercase border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-700 transition-all shadow-none">
                   <Plus size={12} />
                   <span>Thêm thuộc tính</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
                 {availableDimensionOptions.length > 0 ? (
-                  availableDimensionOptions.map((dimension) => (
-                    <DropdownMenuItem 
-                      key={dimension.name} 
-                      onClick={() => toggleDimension(dimension.name)}
-                      className="gap-2 cursor-pointer text-xs py-2"
-                    >
-                      <span className="font-medium">{formatDimLabel(dimension.name)}</span>
-                    </DropdownMenuItem>
-                  ))
+                  <>
+                    <div className="px-2 pt-2 pb-1">
+                      <input
+                        autoFocus
+                        value={dimensionFilter}
+                        onChange={e => setDimensionFilter(e.target.value)}
+                        placeholder="Tìm kiếm..."
+                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {filteredDimensionOptions.length > 0 ? (
+                        filteredDimensionOptions.map((dimension) => (
+                          <DropdownMenuItem 
+                            key={dimension.name} 
+                            onClick={() => {
+                              toggleDimension(dimension.name);
+                              setDimensionFilter('');
+                            }}
+                            className="gap-2 cursor-pointer text-xs py-2"
+                          >
+                            <span className="font-medium">{formatDimLabel(dimension.name)}</span>
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Không có kết quả</div>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Tất cả đã chọn</div>
                 )}
@@ -195,7 +224,7 @@ export function FactPanelBase({
                   </Badge>
                 ))
               ) : (
-                <p className="text-[10px] text-slate-400 italic px-1">Chưa chọn chiều dữ liệu</p>
+                <p className="text-[10px] text-slate-400 italic px-1">Chưa chọn thuộc tính</p>
               )}
             </div>
           </div>
@@ -273,11 +302,6 @@ export function FactPanelBase({
                 </div>
               )
             })}
-          {activeState.selectedDimensions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/20 text-center">
-               <p className="text-[11px] text-slate-400 font-medium">Vui lòng chọn ít nhất một chiều dữ liệu</p>
-            </div>
-          ) : null}
         </div>
 
         <MeasureChartConfigPanel
