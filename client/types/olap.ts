@@ -37,11 +37,11 @@ export type CubeDataResponse = {
 }
 
 export type FilterState = {
-  year: string
-  quarter: string
-  month: string
-  state: string
-  city: string
+  year: string[]
+  quarter: string[]
+  month: string[]
+  state: string[]
+  city: string[]
   customerType: string
   productKey: string
 }

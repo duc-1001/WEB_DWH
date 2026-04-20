@@ -230,25 +230,47 @@ export default function Home() {
     }))
   }
 
-  function onYearChange(nextYear: string) {
-    updateActiveState((prev) => ({
-      ...prev,
-      filters: { ...prev.filters, year: nextYear, quarter: 'all', month: 'all' },
-    }))
-  }
-
-  function onQuarterChange(nextQuarter: string) {
-    updateActiveState((prev) => ({
-      ...prev,
-      filters: { ...prev.filters, quarter: nextQuarter, month: 'all' },
-    }))
-  }
-
-  function onStateChange(nextState: string) {
+  function onYearChange(val: string) {
     updateActiveState((prev) => {
-      const validCities = prev.locationOptions.citiesByState[nextState] || []
-      const nextCity = validCities.includes(prev.filters.city) ? prev.filters.city : ''
-      return { ...prev, filters: { ...prev.filters, state: nextState, city: nextCity } }
+      const current = prev.filters.year as string[]
+      const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+      // Reset quarter/month that are no longer valid when year selection changes
+      return { ...prev, filters: { ...prev.filters, year: next, quarter: [], month: [] } }
+    })
+  }
+
+  function onQuarterChange(val: string) {
+    updateActiveState((prev) => {
+      const current = prev.filters.quarter as string[]
+      const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+      return { ...prev, filters: { ...prev.filters, quarter: next, month: [] } }
+    })
+  }
+
+  function onMonthChange(val: string) {
+    updateActiveState((prev) => {
+      const current = prev.filters.month as string[]
+      const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+      return { ...prev, filters: { ...prev.filters, month: next } }
+    })
+  }
+
+  function onStateChange(val: string) {
+    updateActiveState((prev) => {
+      const current = prev.filters.state as string[]
+      const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+      // Remove cities that don't belong to any still-selected state
+      const validCities = next.flatMap(s => prev.locationOptions.citiesByState[s] || [])
+      const nextCity = (prev.filters.city as string[]).filter(c => validCities.includes(c))
+      return { ...prev, filters: { ...prev.filters, state: next, city: nextCity } }
+    })
+  }
+
+  function onCityChange(val: string) {
+    updateActiveState((prev) => {
+      const current = prev.filters.city as string[]
+      const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+      return { ...prev, filters: { ...prev.filters, city: next } }
     })
   }
 
@@ -278,13 +300,13 @@ export default function Home() {
           quarterOptions={activeState.timeOptions.quarters}
           monthOptions={activeState.timeOptions.months}
           stateOptions={activeState.locationOptions.states}
-          cityOptions={activeState.locationOptions.citiesByState[activeState.filters.state] || []}
+          cityOptions={(activeState.filters.state as string[]).flatMap(s => activeState.locationOptions.citiesByState[s] || [])}
           customerTypeOptions={activeState.customerTypeOptions}
           onYearChange={onYearChange}
           onQuarterChange={onQuarterChange}
-          onMonthChange={(val) => updateActiveState((prev) => ({ ...prev, filters: { ...prev.filters, month: val } }))}
+          onMonthChange={onMonthChange}
           onStateChange={onStateChange}
-          onCityChange={(val) => updateActiveState((prev) => ({ ...prev, filters: { ...prev.filters, city: val } }))}
+          onCityChange={onCityChange}
           onCustomerTypeChange={(val) => updateActiveState((prev) => ({ ...prev, filters: { ...prev.filters, customerType: val } }))}
           toggleTimeFilterUsage={toggleTimeFilterUsage}
           toggleLocationFilterUsage={toggleLocationFilterUsage}

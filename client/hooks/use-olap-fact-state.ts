@@ -205,16 +205,20 @@ export function useOlapFactState() {
         const citiesByState = payload.citiesByState && typeof payload.citiesByState === 'object'
           ? payload.citiesByState
           : {}
-        const hasSelectedState = states.includes(prev.filters.state)
-        const nextState = hasSelectedState ? prev.filters.state : ''
-        const nextCities = citiesByState[nextState] || []
-        const nextCity = nextCities.includes(prev.filters.city) ? prev.filters.city : ''
+
+        // For multi-select: keep only valid selected states
+        const nextState = (prev.filters.state as string[]).filter(s => states.includes(s))
+        // Keep only valid cities for still-selected states
+        const validCities = nextState.flatMap(s => citiesByState[s] || [])
+        const nextCity = (prev.filters.city as string[]).filter(c => validCities.includes(c))
 
         const locationOptionsChanged =
           !arraysEqual(prev.locationOptions.states, states) ||
           !shallowEqualStringArrays(prev.locationOptions.citiesByState, citiesByState)
 
-        const filtersChanged = prev.filters.state !== nextState || prev.filters.city !== nextCity
+        const filtersChanged =
+          !arraysEqual(prev.filters.state as string[], nextState) ||
+          !arraysEqual(prev.filters.city as string[], nextCity)
 
         if (!locationOptionsChanged && !filtersChanged) {
           return prev
@@ -278,9 +282,9 @@ export function useOlapFactState() {
         const quarters = Array.isArray(payload.quarters) ? payload.quarters : []
         const months = Array.isArray(payload.months) ? payload.months : []
 
-        const nextYear = prev.filters.year !== 'all' && years.includes(prev.filters.year) ? prev.filters.year : 'all'
-        const nextQuarter = prev.filters.quarter !== 'all' && quarters.includes(prev.filters.quarter) ? prev.filters.quarter : 'all'
-        const nextMonth = prev.filters.month !== 'all' && months.includes(prev.filters.month) ? prev.filters.month : 'all'
+        const nextYear = (prev.filters.year as string[]).filter(y => years.includes(y))
+        const nextQuarter = (prev.filters.quarter as string[]).filter(q => quarters.includes(q))
+        const nextMonth = (prev.filters.month as string[]).filter(m => months.includes(m))
 
         const timeOptionsChanged =
           !arraysEqual(prev.timeOptions.years, years) ||
@@ -288,9 +292,9 @@ export function useOlapFactState() {
           !arraysEqual(prev.timeOptions.months, months)
 
         const filtersChanged =
-          prev.filters.year !== nextYear ||
-          prev.filters.quarter !== nextQuarter ||
-          prev.filters.month !== nextMonth
+          !arraysEqual(prev.filters.year as string[], nextYear) ||
+          !arraysEqual(prev.filters.quarter as string[], nextQuarter) ||
+          !arraysEqual(prev.filters.month as string[], nextMonth)
 
         if (!timeOptionsChanged && !filtersChanged) {
           return prev

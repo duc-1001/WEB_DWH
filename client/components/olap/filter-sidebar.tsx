@@ -1,7 +1,132 @@
-import { Clock3, MapPin, RotateCcw, UsersRound, Filter as FilterIcon } from 'lucide-react'
+'use client'
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Clock3, MapPin, RotateCcw, UsersRound, Filter as FilterIcon, ChevronDown, Check, X } from 'lucide-react'
 import { FactKey, FactState, FilterUsageState } from '../../types/olap'
-import { QUARTER_OPTIONS, MONTH_OPTIONS, isAllFilterValue } from '@/lib/olap-utils'
+import { QUARTER_OPTIONS, MONTH_OPTIONS } from '@/lib/olap-utils'
 import { JSX } from 'react'
+
+// ─── MultiSelect Component ────────────────────────────────────────────────────
+
+type MultiSelectProps = {
+  options: { value: string; label: string }[]
+  selected: string[]
+  onToggle: (value: string) => void
+  placeholder: string
+  disabled?: boolean
+  maxBadges?: number
+}
+
+function MultiSelect({ options, selected, onToggle, placeholder, disabled, maxBadges = 2 }: MultiSelectProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  const toggle = useCallback(() => {
+    if (!disabled) setOpen(prev => !prev)
+  }, [disabled])
+
+  const selectedLabels = selected.map(v => {
+    const opt = options.find(o => o.value === v)
+    return opt ? opt.label : v
+  })
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={disabled}
+        className={[
+          'flex min-h-[2.5rem] w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left text-sm outline-none transition',
+          'bg-white border-emerald-300',
+          disabled
+            ? 'cursor-not-allowed opacity-50'
+            : 'cursor-pointer hover:border-emerald-500 focus:border-emerald-500',
+          open ? 'border-emerald-500 ring-2 ring-emerald-200' : '',
+        ].join(' ')}
+      >
+        <span className="flex flex-1 flex-wrap gap-1 overflow-hidden">
+          {selected.length === 0 ? (
+            <span className="text-slate-400 leading-none my-0.5">{placeholder}</span>
+          ) : selected.length <= maxBadges ? (
+            selectedLabels.map((label, i) => (
+              <span
+                key={selected[i]}
+                className="inline-flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 leading-none"
+              >
+                {label}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onToggle(selected[i]) }}
+                  className="ml-0.5 rounded-sm hover:text-emerald-600"
+                  disabled={disabled}
+                >
+                  <X size={10} strokeWidth={2.5} />
+                </button>
+              </span>
+            ))
+          ) : (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 leading-none">
+              {selected.length} đã chọn
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-emerald-600 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-emerald-200 bg-white shadow-xl">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-slate-400">Không có lựa chọn</div>
+          ) : (
+            options.map(opt => {
+              const isSelected = selected.includes(opt.value)
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onToggle(opt.value)}
+                  className={[
+                    'flex w-full items-center gap-2 px-3 py-2 text-sm transition',
+                    isSelected
+                      ? 'bg-emerald-50 text-emerald-800'
+                      : 'text-slate-700 hover:bg-emerald-50/60',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition',
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                        : 'border-slate-300 bg-white',
+                    ].join(' ')}
+                  >
+                    {isSelected && <Check size={10} strokeWidth={3} />}
+                  </span>
+                  {opt.label}
+                </button>
+              )
+            })
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── FilterSidebar ────────────────────────────────────────────────────────────
 
 type FilterSidebarProps = {
   activeFact: FactKey
@@ -48,6 +173,24 @@ export function FilterSidebar({
   resetFilters,
   Skeleton,
 }: FilterSidebarProps) {
+  const selectedYears = activeState.filters.year as string[]
+  const selectedQuarters = activeState.filters.quarter as string[]
+  const selectedMonths = activeState.filters.month as string[]
+  const selectedStates = activeState.filters.state as string[]
+  const selectedCities = activeState.filters.city as string[]
+
+  const yearOpts = yearOptions.map(y => ({ value: y, label: y }))
+  const quarterOpts = quarterOptions.map(q => ({
+    value: q,
+    label: QUARTER_OPTIONS.find(o => o.value === q)?.label ?? q,
+  }))
+  const monthOpts = monthOptions.map(m => ({
+    value: m,
+    label: MONTH_OPTIONS.find(o => o.value === m)?.label ?? m,
+  }))
+  const stateOpts = stateOptions.map(s => ({ value: s, label: s }))
+  const cityOpts = cityOptions.map(c => ({ value: c, label: c }))
+
   return (
     <aside className="w-full rounded-2xl border border-emerald-200 bg-[#c9d9cf] p-0 shadow-sm lg:sticky lg:top-6 lg:h-[calc(100vh-1.7rem)] lg:w-80 lg:self-start lg:overflow-y-auto">
       <div className="border-b border-emerald-300/70 px-5 py-4">
@@ -58,6 +201,7 @@ export function FilterSidebar({
       </div>
 
       <div className="space-y-6 px-5 py-4">
+        {/* ── Thời gian ── */}
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-900">
             <Clock3 size={16} />
@@ -69,64 +213,47 @@ export function FilterSidebar({
                 onChange={(event) => toggleTimeFilterUsage(event.target.checked)}
                 className="h-3.5 w-3.5 rounded border-emerald-400 bg-white accent-emerald-600"
               />
-              Sử dụng
+              Bật
             </label>
           </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1 text-sm">
+
+          <div className="space-y-2">
+            <label className="block space-y-1 text-sm">
               <span className="text-emerald-800">Năm</span>
-              <select
-                value={activeState.filters.year}
-                onChange={(event) => onYearChange(event.target.value)}
+              <MultiSelect
+                options={yearOpts}
+                selected={selectedYears}
+                onToggle={onYearChange}
+                placeholder="Tất cả năm"
                 disabled={!isTimeFilterEnabled}
-                className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
-              >
-                <option value="all">Tất cả</option>
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              />
             </label>
 
-            <label className="space-y-1 text-sm">
+            <label className="block space-y-1 text-sm">
               <span className="text-emerald-800">Quý</span>
-              <select
-                value={activeState.filters.quarter}
-                onChange={(event) => onQuarterChange(event.target.value)}
-                disabled={!isTimeFilterEnabled || (activeFact === 'fact_inventory' && isAllFilterValue(activeState.filters.year))}
-                className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
-              >
-                <option value="all">Tất cả quý</option>
-                {quarterOptions.map((quarter) => (
-                  <option key={quarter} value={quarter}>
-                    {QUARTER_OPTIONS.find((item) => item.value === quarter)?.label || quarter}
-                  </option>
-                ))}
-              </select>
+              <MultiSelect
+                options={quarterOpts}
+                selected={selectedQuarters}
+                onToggle={onQuarterChange}
+                placeholder="Tất cả quý"
+                disabled={!isTimeFilterEnabled}
+              />
+            </label>
+
+            <label className="block space-y-1 text-sm">
+              <span className="text-emerald-800">Tháng</span>
+              <MultiSelect
+                options={monthOpts}
+                selected={selectedMonths}
+                onToggle={onMonthChange}
+                placeholder="Tất cả tháng"
+                disabled={!isTimeFilterEnabled}
+              />
             </label>
           </div>
-
-          <label className="block space-y-1 text-sm">
-            <span className="text-emerald-800">Tháng</span>
-            <select
-              value={activeState.filters.month}
-              onChange={(event) => onMonthChange(event.target.value)}
-              disabled={
-                !isTimeFilterEnabled ||
-                (activeFact === 'fact_inventory' && (isAllFilterValue(activeState.filters.year) || isAllFilterValue(activeState.filters.quarter)))
-              }
-              className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
-            >
-              <option value="all">Tất cả tháng</option>
-              {monthOptions.map((month) => (
-                <option key={month} value={month}>
-                  {MONTH_OPTIONS.find((item) => item.value === month)?.label || month}
-                </option>
-              ))}
-            </select>
-          </label>
         </section>
 
+        {/* ── Địa điểm ── */}
         <section className="space-y-3 border-t border-emerald-300/70 pt-4">
           <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-900">
             <MapPin size={16} />
@@ -138,41 +265,36 @@ export function FilterSidebar({
                 onChange={(event) => toggleLocationFilterUsage(event.target.checked)}
                 className="h-3.5 w-3.5 rounded border-emerald-400 bg-white accent-emerald-600"
               />
-              Sử dụng
+              Bật
             </label>
           </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1 text-sm">
+
+          <div className="space-y-2">
+            <label className="block space-y-1 text-sm">
               <span className="text-emerald-800">Tiểu bang</span>
-              <select
-                value={activeState.filters.state}
-                onChange={(event) => onStateChange(event.target.value)}
+              <MultiSelect
+                options={stateOpts}
+                selected={selectedStates}
+                onToggle={onStateChange}
+                placeholder="Tất cả tiểu bang"
                 disabled={!isLocationFilterEnabled}
-                className="h-10 max-h-96 overflow-hidden w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
-              >
-                <option value="">Tất cả</option>
-                {stateOptions.map((state) => (
-                  <option key={state} value={state}>{state}</option>
-                ))}
-              </select>
+              />
             </label>
-            <label className="space-y-1 text-sm">
+
+            <label className="block space-y-1 text-sm">
               <span className="text-emerald-800">Thành phố</span>
-              <select
-                value={activeState.filters.city}
-                onChange={(event) => onCityChange(event.target.value)}
-                disabled={!isLocationFilterEnabled || isAllFilterValue(activeState.filters.state)}
-                className="h-10 w-full rounded-lg border border-emerald-300 bg-white px-3 outline-none transition focus:border-emerald-500"
-              >
-                <option value="">Tất cả</option>
-                {cityOptions.map((city) => (
-                  <option key={city} value={city}>{city}</option>
-                ))}
-              </select>
+              <MultiSelect
+                options={cityOpts}
+                selected={selectedCities}
+                onToggle={onCityChange}
+                placeholder="Tất cả thành phố"
+                disabled={!isLocationFilterEnabled || selectedStates.length === 0}
+              />
             </label>
           </div>
         </section>
 
+        {/* ── Khách hàng ── */}
         {activeFact === 'fact_sales' ? (
           <section className="space-y-3 border-t border-emerald-300/70 pt-4">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-900">

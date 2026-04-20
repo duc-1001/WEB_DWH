@@ -132,27 +132,17 @@ function getColumnValue(row: CubeRow, column: TableColumn, filters: FilterState)
     return String(row.dimensions?.[column.key] || 'N/A')
   }
 
-  if (column.key === 'year') {
-    return filters.year
-  }
-  if (column.key === 'quarter') {
-    return filters.quarter
-  }
-  if (column.key === 'month') {
-    return filters.month
-  }
-  if (column.key === 'state') {
-    return filters.state
-  }
-  if (column.key === 'city') {
-    return filters.city
-  }
-  if (column.key === 'customerType') {
-    return filters.customerType
-  }
-  if (column.key === 'productKey') {
-    return filters.productKey
-  }
+  // Helper: render array filter value as readable string
+  const arrStr = (v: string | string[]) =>
+    Array.isArray(v) ? (v.length > 0 ? v.join(', ') : 'N/A') : String(v || 'N/A')
+
+  if (column.key === 'year') return arrStr(filters.year)
+  if (column.key === 'quarter') return arrStr(filters.quarter)
+  if (column.key === 'month') return arrStr(filters.month)
+  if (column.key === 'state') return arrStr(filters.state)
+  if (column.key === 'city') return arrStr(filters.city)
+  if (column.key === 'customerType') return filters.customerType
+  if (column.key === 'productKey') return filters.productKey
 
   return 'N/A'
 }

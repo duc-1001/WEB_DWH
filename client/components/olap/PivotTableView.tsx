@@ -23,7 +23,7 @@ interface PivotTableViewProps {
   rows: CubeRow[]
   columns: { key: string; label: string; source: 'filter' | 'dimension' }[]
   measures: string[]
-  filters: Record<string, string>
+  filters: Record<string, string | string[]>
 }
 
 export function PivotTableView({
@@ -79,12 +79,12 @@ export function PivotTableView({
       const rVal =
         rowCol?.source === 'dimension'
           ? String(row.dimensions[rowKey] || 'N/A')
-          : filters[rowKey] || 'N/A'
+          : (() => { const v = filters[rowKey]; return Array.isArray(v) ? (v.length > 0 ? v.join(', ') : 'N/A') : String(v || 'N/A') })()
 
       const cVal =
         colCol?.source === 'dimension'
           ? String(row.dimensions[colKey] || 'N/A')
-          : filters[colKey] || 'N/A'
+          : (() => { const v = filters[colKey]; return Array.isArray(v) ? (v.length > 0 ? v.join(', ') : 'N/A') : String(v || 'N/A') })()
 
       const value = Number(row.measures[measure] || 0)
 
