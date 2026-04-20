@@ -147,166 +147,169 @@ export function FactPanelBase({
         <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700">{activeState.errorMessage}</div>
       ) : null}
 
-      <div className="space-y-4">
-        {activeState.metaLoading ? (
-          <div className="space-y-2 px-1">
-            <Skeleton className="h-3 w-40" />
-            <Skeleton className="h-20 w-full rounded-xl" />
-          </div>
-        ) : null}
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-slate-100 bg-slate-50/50 px-3 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-emerald-100 text-emerald-700">
-                <Layers size={14} />
+
+
+      <div className='grid grid-cols-2 gap-2'>
+        <div className="space-y-4">
+          {activeState.metaLoading ? (
+            <div className="space-y-2 px-1">
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-20 w-full rounded-xl" />
+            </div>
+          ) : null}
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-slate-100 bg-slate-50/50 px-3 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-md bg-emerald-100 text-emerald-700">
+                  <Layers size={14} />
+                </div>
+                <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-tight">Thuộc tính phân tích</h3>
               </div>
-              <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-tight">Thuộc tính phân tích</h3>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-[10px] font-bold uppercase border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-700 transition-all shadow-none">
+                    <Plus size={12} />
+                    <span>Thêm thuộc tính</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {availableDimensionOptions.length > 0 ? (
+                    <>
+                      <div className="px-2 pt-2 pb-1">
+                        <input
+                          autoFocus
+                          value={dimensionFilter}
+                          onChange={e => setDimensionFilter(e.target.value)}
+                          placeholder="Tìm kiếm..."
+                          className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {filteredDimensionOptions.length > 0 ? (
+                          filteredDimensionOptions.map((dimension) => (
+                            <DropdownMenuItem
+                              key={dimension.name}
+                              onClick={() => {
+                                toggleDimension(dimension.name);
+                                setDimensionFilter('');
+                              }}
+                              className="gap-2 cursor-pointer text-xs py-2"
+                            >
+                              <span className="font-medium">{formatDimLabel(dimension.name)}</span>
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Không có kết quả</div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Tất cả đã chọn</div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-[10px] font-bold uppercase border-emerald-200 bg-emerald-50/30 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-700 transition-all shadow-none">
-                  <Plus size={12} />
-                  <span>Thêm thuộc tính</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {availableDimensionOptions.length > 0 ? (
-                  <>
-                    <div className="px-2 pt-2 pb-1">
-                      <input
-                        autoFocus
-                        value={dimensionFilter}
-                        onChange={e => setDimensionFilter(e.target.value)}
-                        placeholder="Tìm kiếm..."
-                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
-                      />
-                    </div>
-                    <div className="max-h-56 overflow-y-auto">
-                      {filteredDimensionOptions.length > 0 ? (
-                        filteredDimensionOptions.map((dimension) => (
-                          <DropdownMenuItem
-                            key={dimension.name}
-                            onClick={() => {
-                              toggleDimension(dimension.name);
-                              setDimensionFilter('');
-                            }}
-                            className="gap-2 cursor-pointer text-xs py-2"
-                          >
-                            <span className="font-medium">{formatDimLabel(dimension.name)}</span>
-                          </DropdownMenuItem>
-                        ))
-                      ) : (
-                        <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Không có kết quả</div>
-                      )}
-                    </div>
-                  </>
+            <div className="p-2 bg-slate-50/30">
+              <div className="flex flex-wrap gap-1.5 min-h-[1.5rem] items-center">
+                {activeState.selectedDimensions.length > 0 ? (
+                  activeState.selectedDimensions.map((dimensionName) => (
+                    <Badge
+                      key={dimensionName}
+                      variant="secondary"
+                      className="pl-2.5 pr-1 py-0.5 gap-1 border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 transition-colors cursor-default group shadow-sm"
+                    >
+                      <span className="text-[10px] font-bold uppercase">{formatDimLabel(dimensionName)}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDimension(dimensionName);
+                        }}
+                        className="p-0.5 rounded-full hover:bg-emerald-100 text-emerald-600 transition-colors"
+                      >
+                        <X size={10} />
+                      </button>
+                    </Badge>
+                  ))
                 ) : (
-                  <div className="px-2 py-3 text-center text-[10px] text-slate-400 italic">Tất cả đã chọn</div>
+                  <p className="text-[10px] text-slate-400 italic px-1">Chưa chọn thuộc tính</p>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="p-2 bg-slate-50/30">
-            <div className="flex flex-wrap gap-1.5 min-h-[1.5rem] items-center">
-              {activeState.selectedDimensions.length > 0 ? (
-                activeState.selectedDimensions.map((dimensionName) => (
-                  <Badge
-                    key={dimensionName}
-                    variant="secondary"
-                    className="pl-2.5 pr-1 py-0.5 gap-1 border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 transition-colors cursor-default group shadow-sm"
-                  >
-                    <span className="text-[10px] font-bold uppercase">{formatDimLabel(dimensionName)}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDimension(dimensionName);
-                      }}
-                      className="p-0.5 rounded-full hover:bg-emerald-100 text-emerald-600 transition-colors"
-                    >
-                      <X size={10} />
-                    </button>
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-[10px] text-slate-400 italic px-1">Chưa chọn thuộc tính</p>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2">
-          {activeState.dimensions
-            .filter((dimension) => activeState.selectedDimensions.includes(dimension.name))
-            .map((dimension) => {
-              const selectedLevelIndexes = getNormalizedLevelIndexes(dimension, activeState.currentLevels[dimension.name])
-              const allowedLevelIndexes = getAllowedLevelIndexes(dimension)
-              const isDimensionSelected = selectedLevelIndexes.length > 0
-              const selectedLevelLabels = getSelectedLevelLabels(dimension, selectedLevelIndexes)
-              const memberSearchQueries = activeState.memberSearchQueries || {}
-              return (
-                <div
-                  key={dimension.name}
-                  className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:border-emerald-200"
-                >
-                  <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-slate-800 uppercase">{formatDimLabel(dimension.name)}</span>
-                    </div>
-                    <button
-                      onClick={() => toggleDimension(dimension.name)}
-                      className="p-1 rounded-md text-slate-400 hover:bg-slate-100 transition-colors"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 rounded-lg border border-slate-50 bg-slate-50/50 p-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {allowedLevelIndexes.map((index) => {
-                        const level = dimension.hierarchy[index]
-                        const checked = selectedLevelIndexes.includes(index)
-                        return (
-                          <button
-                            key={level}
-                            onClick={() => toggleDimensionLevel(dimension.name, index)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${checked
-                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
-                              }`}
-                          >
-                            <span className="truncate">{level}</span>
-                          </button>
-                        )
-                      })}
+          <div className="grid grid-cols-1 gap-2">
+            {activeState.dimensions
+              .filter((dimension) => activeState.selectedDimensions.includes(dimension.name))
+              .map((dimension) => {
+                const selectedLevelIndexes = getNormalizedLevelIndexes(dimension, activeState.currentLevels[dimension.name])
+                const allowedLevelIndexes = getAllowedLevelIndexes(dimension)
+                const isDimensionSelected = selectedLevelIndexes.length > 0
+                const selectedLevelLabels = getSelectedLevelLabels(dimension, selectedLevelIndexes)
+                const memberSearchQueries = activeState.memberSearchQueries || {}
+                return (
+                  <div
+                    key={dimension.name}
+                    className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition hover:border-emerald-200"
+                  >
+                    <div className="flex items-center justify-between gap-2 px-1 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-800 uppercase">{formatDimLabel(dimension.name)}</span>
+                      </div>
+                      <button
+                        onClick={() => toggleDimension(dimension.name)}
+                        className="p-1 rounded-md text-slate-400 hover:bg-slate-100 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
 
-                    {selectedLevelIndexes.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-200/50">
-                        {selectedLevelIndexes.map((levelIndex) => {
-                          const levelName = dimension.hierarchy[levelIndex]
-                          const fieldKey = getDimensionFieldKey(dimension, levelIndex)
-                          const memberQueryKey = `${dimension.name}::${levelIndex}`
-
+                    <div className="space-y-2 rounded-lg border border-slate-50 bg-slate-50/50 p-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {allowedLevelIndexes.map((index) => {
+                          const level = dimension.hierarchy[index]
+                          const checked = selectedLevelIndexes.includes(index)
                           return (
-                            <div key={fieldKey} className="relative group">
-                              <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                              <input
-                                value={memberSearchQueries[memberQueryKey] || ''}
-                                onChange={(event) => updateMemberSearchQuery(dimension.name, levelIndex, event.target.value)}
-                                className="h-7 w-full rounded-md border border-slate-200 bg-white pl-8 pr-2 text-[10px] outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
-                                placeholder={`Lọc theo ${levelName}...`}
-                              />
-                            </div>
+                            <button
+                              key={level}
+                              onClick={() => toggleDimensionLevel(dimension.name, index)}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition-all text-[10px] font-medium ${checked
+                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50'
+                                }`}
+                            >
+                              <span className="truncate">{level}</span>
+                            </button>
                           )
                         })}
                       </div>
-                    )}
+
+                      {selectedLevelIndexes.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-200/50">
+                          {selectedLevelIndexes.map((levelIndex) => {
+                            const levelName = dimension.hierarchy[levelIndex]
+                            const fieldKey = getDimensionFieldKey(dimension, levelIndex)
+                            const memberQueryKey = `${dimension.name}::${levelIndex}`
+
+                            return (
+                              <div key={fieldKey} className="relative group">
+                                <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                                <input
+                                  value={memberSearchQueries[memberQueryKey] || ''}
+                                  onChange={(event) => updateMemberSearchQuery(dimension.name, levelIndex, event.target.value)}
+                                  className="h-7 w-full rounded-md border border-slate-200 bg-white pl-8 pr-2 text-[10px] outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10"
+                                  placeholder={`Lọc theo ${levelName}...`}
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+          </div>
         </div>
 
         <MeasureChartConfigPanel
@@ -369,17 +372,19 @@ export function FactPanelBase({
                           let value = '-'
 
                           if (column.source === 'filter') {
+                            const arrayVal = (v: string | string[]) =>
+                              Array.isArray(v) ? (v.length > 0 ? v.join(', ') : '-') : (v || '-')
                             value =
                               column.key === 'year'
-                                ? activeState.filters.year
+                                ? arrayVal(activeState.filters.year)
                                 : column.key === 'quarter'
-                                  ? activeState.filters.quarter
+                                  ? arrayVal(activeState.filters.quarter)
                                   : column.key === 'month'
-                                    ? activeState.filters.month
+                                    ? arrayVal(activeState.filters.month)
                                     : column.key === 'state'
-                                      ? activeState.filters.state
+                                      ? arrayVal(activeState.filters.state)
                                       : column.key === 'city'
-                                        ? activeState.filters.city
+                                        ? arrayVal(activeState.filters.city)
                                         : column.key === 'customerType'
                                           ? activeState.filters.customerType
                                           : column.key === 'productKey'

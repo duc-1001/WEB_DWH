@@ -40,11 +40,11 @@ export const FACT_CONFIG: Record<
 }
 
 export const DEFAULT_FILTERS: FilterState = {
-  year: 'all',
-  quarter: 'all',
-  month: 'all',
-  state: '',
-  city: '',
+  year: [],
+  quarter: [],
+  month: [],
+  state: [],
+  city: [],
   customerType: 'all',
   productKey: '',
 }
@@ -82,17 +82,17 @@ export const MONTH_OPTIONS = [
 ]
 
 export const DIMENSION_ALLOWED_LEVELS: Record<string, string[]> = {
-  'DIM CUSTOMER': ['CUSTOMER NAME'],
+  'DIM CUSTOMER': ['CUSTOMER KEY', 'CUSTOMER NAME'],
   'DIM STORE': ['STORE KEY'],
-  'DIM PRODUCT': ['PRODUCT KEY'],
+  'DIM PRODUCT': ['PRODUCT KEY', "WEIGHT", "PRODUCT SIZE"], 
 }
-
+// ,"WEIGHT","PRODUCT SIZE","DESCRIPTION"
 export const DIMENSION_ALLOWED_TABLE_LEVELS: Record<string, string[]> = {
-  'DIM CUSTOMER': ['CUSTOMER NAME'],
-  'DIM STORE': ['STORE KEY',"STATE","CITY"],
+  'DIM CUSTOMER': ['CUSTOMER KEY', 'CUSTOMER NAME'],
+  'DIM STORE': ['STORE KEY',"STATE","CITY","PHONENUMBER"],
   "DIM LOCATION": ["STATE", "CITY"],
   "DIM TIME": ["YEAR", "QUARTER", "MONTH"],
-  'DIM PRODUCT': ['PRODUCT KEY'],
+  'DIM PRODUCT': ['PRODUCT KEY', "WEIGHT", "PRODUCT SIZE", "DESCRIPTION"],
 }
 
 
@@ -162,18 +162,19 @@ export function formatDimLabel(value: string) {
   return raw.replace(/\bTime Key\b/gi, 'Ngày')
 }
 
-export function isAllFilterValue(value: string) {
+export function isAllFilterValue(value: string | string[]) {
+  if (Array.isArray(value)) return value.length === 0
   const normalized = String(value || '').trim().toLowerCase()
   return !normalized || normalized === 'all' || normalized === 'tất cả' || normalized === 'tat ca'
 }
 
 export function getEffectiveFilters(filters: FilterState, filterUsage: FilterUsageState): FilterState {
   return {
-    year: filterUsage.year ? filters.year : 'all',
-    quarter: filterUsage.quarter ? filters.quarter : 'all',
-    month: filterUsage.month ? filters.month : 'all',
-    state: filterUsage.state ? filters.state : 'all',
-    city: filterUsage.city ? filters.city : 'all',
+    year: filterUsage.year ? filters.year : [],
+    quarter: filterUsage.quarter ? filters.quarter : [],
+    month: filterUsage.month ? filters.month : [],
+    state: filterUsage.state ? filters.state : [],
+    city: filterUsage.city ? filters.city : [],
     customerType: filterUsage.customerType ? filters.customerType : 'all',
     productKey: filterUsage.productKey ? filters.productKey : 'all',
   }

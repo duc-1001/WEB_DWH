@@ -104,8 +104,23 @@ function normalizeFilterMap(filters = {}) {
     }
 
     const normalizedKey = String(key || "").trim().toLowerCase();
+    if (!normalizedKey) continue;
+
+    // Hỗ trợ string[] (multi-select): bỏ qua nếu rỗng, giữ nguyên array nếu có giá trị
+    // MDX builder không dùng filter map để sinh WHERE clause (applyFilters xử lý sau query)
+    if (Array.isArray(value)) {
+      const valid = value.filter(v => {
+        const n = String(v || "").trim();
+        return n && n.toLowerCase() !== "all";
+      });
+      if (valid.length > 0) {
+        map[normalizedKey] = valid[0]; // dùng giá trị đầu tiên cho tương thích ngược
+      }
+      continue;
+    }
+
     const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue || normalizedValue.toLowerCase() === "all") {
+    if (!normalizedValue || normalizedValue.toLowerCase() === "all") {
       continue;
     }
 

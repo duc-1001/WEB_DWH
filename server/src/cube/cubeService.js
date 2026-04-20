@@ -83,6 +83,10 @@ function matchesFilter(actualValue, expectedValue) {
 }
 
 function isActiveFilterValue(value) {
+  // Hỗ trợ cả string và string[] (multi-select)
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
   const normalized = normalizeText(value);
   if (!normalized) {
     return false;
@@ -109,22 +113,37 @@ function normalizeCustomerTypeFilterValue(value) {
   return String(value || "").trim();
 }
 
+// Hàm kiểm tra một giá trị có khớp với filter không
+// filter có thể là string (single) hoặc string[] (multi-select → OR logic)
+function matchesMultiFilter(actualValue, filterValue) {
+  if (!isActiveFilterValue(filterValue)) return true; // không lọc
+
+  if (Array.isArray(filterValue)) {
+    // OR logic: khớp bất kỳ giá trị nào trong array
+    return filterValue.some((v) => matchesFilter(actualValue, v));
+  }
+
+  return matchesFilter(actualValue, filterValue);
+}
+
 function applyFilters(rows, filters = {}) {
-  const productKey = isActiveFilterValue(filters.productKey) ? filters.productKey : "";
-  const year = isActiveFilterValue(filters.year) ? filters.year : "";
-  const quarter = isActiveFilterValue(filters.quarter) ? filters.quarter : "";
-  const month = isActiveFilterValue(filters.month) ? filters.month : "";
-  const customerType = isActiveFilterValue(filters.customerType)
-    ? normalizeCustomerTypeFilterValue(filters.customerType)
-    : "";
-  const state = isActiveFilterValue(filters.state) ? filters.state : "";
-  const city = isActiveFilterValue(filters.city) ? filters.city : "";
-  const storeKey = isActiveFilterValue(filters.storeKey || filters.locationKey)
-    ? (filters.storeKey || filters.locationKey)
+  const hasProductKey = isActiveFilterValue(filters.productKey);
+  const hasYear = isActiveFilterValue(filters.year);
+  const hasQuarter = isActiveFilterValue(filters.quarter);
+  const hasMonth = isActiveFilterValue(filters.month);
+  const hasCustomerType = isActiveFilterValue(filters.customerType);
+  const hasState = isActiveFilterValue(filters.state);
+  const hasCity = isActiveFilterValue(filters.city);
+  const hasStoreKey = isActiveFilterValue(filters.storeKey || filters.locationKey);
+
+  // Chuẩn hóa customerType (string only)
+  const customerTypeVal = hasCustomerType
+    ? normalizeCustomerTypeFilterValue(String(Array.isArray(filters.customerType) ? filters.customerType[0] : filters.customerType || ""))
     : "";
 
   return rows.filter((row) => {
-    if (productKey) {
+    if (hasProductKey) {
+      const productKey = filters.productKey;
       const rowProductKey = getFormattedDimensionValue(row, [
         "PRODUCT KEY",
         "DIM PRODUCT / PRODUCT KEY",
@@ -136,67 +155,56 @@ function applyFilters(rows, filters = {}) {
         "[DIM PRODUCT].[PRODUCT KEY]::DESCRIPTION",
       ]);
 
-      if (!matchesFilter(rowProductKey, productKey) && !matchesFilter(rowDescription, productKey)) {
+      if (!matchesMultiFilter(rowProductKey, productKey) && !matchesMultiFilter(rowDescription, productKey)) {
         return false;
       }
     }
 
-    if (year) {
+    if (hasYear) {
       const rowYear = getFormattedDimensionValue(row, ["Year", "DIM TIME / Year", "Dim Time / Year", "[Dim Time].[Hierarchy]::Year"]);
-      if (!matchesFilter(rowYear, year)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowYear, filters.year)) return false;
     }
 
-    if (quarter) {
+    if (hasQuarter) {
       const rowQuarter = getFormattedDimensionValue(row, [
         "Quarter",
         "DIM TIME / Quarter",
         "Dim Time / Quarter",
         "[Dim Time].[Hierarchy]::Quarter",
       ]);
-      if (!matchesFilter(rowQuarter, quarter)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowQuarter, filters.quarter)) return false;
     }
 
-    if (month) {
+    if (hasMonth) {
       const rowMonth = getFormattedDimensionValue(row, [
         "Month",
         "DIM TIME / Month",
         "Dim Time / Month",
         "[Dim Time].[Hierarchy]::Month",
       ]);
-      if (!matchesFilter(rowMonth, month)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowMonth, filters.month)) return false;
     }
 
-    if (customerType) {
+    if (hasCustomerType && customerTypeVal) {
       const rowCustomerType = getFormattedDimensionValue(row, [
         "CUSTOMER TYPE",
         "DIM CUSTOMER / CUSTOMER TYPE",
       ]);
-      if (!matchesFilter(rowCustomerType, customerType)) {
-        return false;
-      }
+      if (!matchesFilter(rowCustomerType, customerTypeVal)) return false;
     }
 
-    if (state) {
+    if (hasState) {
       const rowState = getFormattedDimensionValue(row, ["STATE", "DIM LOCATION / STATE", "DIM STORE / STATE"]);
-      if (!matchesFilter(rowState, state)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowState, filters.state)) return false;
     }
 
-    if (city) {
+    if (hasCity) {
       const rowCity = getFormattedDimensionValue(row, ["CITY", "DIM LOCATION / CITY", "DIM STORE / CITY"]);
-      if (!matchesFilter(rowCity, city)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowCity, filters.city)) return false;
     }
 
-    if (storeKey) {
+    if (hasStoreKey) {
+      const storeKeyVal = filters.storeKey || filters.locationKey;
       const rowStoreKey = getFormattedDimensionValue(row, [
         "DIM LOCATION / LOCATION KEY",
         "LOCATION KEY",
@@ -204,9 +212,7 @@ function applyFilters(rows, filters = {}) {
         "DIM STORE / STORE KEY",
         "DIM STORE / LOCATION KEY",
       ]);
-      if (!matchesFilter(rowStoreKey, storeKey)) {
-        return false;
-      }
+      if (!matchesMultiFilter(rowStoreKey, storeKeyVal)) return false;
     }
 
     return true;
@@ -395,9 +401,14 @@ function getProductResolvedField(level) {
   return buildResolvedFieldFromDimensionLevel(productDimension, level);
 }
 
-function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage = {}, factGroup = "") {
+function ensureFilterDimensionFields(
+  selectedFields,
+  filters = {},
+  filterUsage = {},
+  factGroup = ""
+) {
   const resolved = Array.isArray(selectedFields) ? [...selectedFields] : [];
-  const seen = new Set(resolved.map((field) => field.key));
+  const seen = new Set(resolved.map((f) => f.key));
 
   const addField = (field) => {
     if (!field || seen.has(field.key)) return;
@@ -405,45 +416,39 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
     resolved.push(field);
   };
 
-  const normalizeFilter = (value) => String(value || "").trim().toLowerCase();
+  const normalize = (v) => String(v || "").trim().toLowerCase();
 
-  const isAllValue = (value) => {
-    const normalized = normalizeFilter(value);
-    return !normalized || normalized === "all" || normalized === "tat ca" || normalized === "tất cả";
+  // Hỗ trợ cả string và string[] cho isAll / isActive
+  const isAll = (v) => {
+    if (Array.isArray(v)) return v.length === 0;
+    const n = normalize(v);
+    return !n || n === "all" || n === "tat ca" || n === "tất cả";
   };
 
-  const hasStateFilter = isActiveFilterValue(filters.state);
-  const hasCityFilter = isActiveFilterValue(filters.city);
-  const hasLocationKeyFilter =
-    isActiveFilterValue(filters.locationKey) || isActiveFilterValue(filters.storeKey);
+  const isActive = (v) => !isAll(v);
 
-  const hasCustomerTypeFilter = isActiveFilterValue(filters.customerType);
-  const hasProductKeyFilter = isActiveFilterValue(filters.productKey);
+  const isFactSales = String(factGroup).toLowerCase().includes("sales");
 
-  const isYearAll = isAllValue(filters.year) && filterUsage?.year !== false;
-  const isQuarterAll = isAllValue(filters.quarter) && filterUsage?.quarter !== false;
-  const isMonthAll = isAllValue(filters.month) && filterUsage?.month !== false;
-
-  const isStateAll = isAllValue(filters.state) && filterUsage?.state !== false;
-  const isCityAll = isAllValue(filters.city) && filterUsage?.city !== false;
-
+  // =========================
   // LOCATION
-  if (hasStateFilter || hasCityFilter) {
-    addField(getLocationResolvedField("STATE", factGroup));
+  // =========================
+
+  const hasState = isActive(filters.state);
+  const hasCity = isActive(filters.city);
+
+  const isStateAll = isAll(filters.state) && filterUsage?.state !== false;
+  const isCityAll = isAll(filters.city) && filterUsage?.city !== false;
+
+  if (hasState || hasCity) {
+    const stateField = getLocationResolvedField("STATE", factGroup);
+    if (stateField) addField(stateField);
   }
 
-  if (hasCityFilter) {
-    addField(getLocationResolvedField("CITY", factGroup));
+  if (hasCity) {
+    const cityField = getLocationResolvedField("CITY", factGroup);
+    if (cityField) addField(cityField);
   }
 
-  if (hasLocationKeyFilter) {
-    addField(
-      getLocationResolvedField("LOCATION KEY", factGroup) ||
-      getLocationResolvedField("STORE KEY", factGroup)
-    );
-  }
-
-  // location cascade
   if (isStateAll) {
     const stateField = getLocationResolvedField("STATE", factGroup);
     if (stateField) addField(stateField);
@@ -452,49 +457,69 @@ function ensureFilterDimensionFields(selectedFields, filters = {}, filterUsage =
     if (cityField) addField(cityField);
   }
 
+  // =========================
   // CUSTOMER TYPE
-  if (hasCustomerTypeFilter) {
-    const customerTypeField = getCustomerTypeResolvedField();
-    if (customerTypeField) addField(customerTypeField);
-  }
+  // =========================
 
-  // PRODUCT
-  if (hasProductKeyFilter) {
-    const productKeyField =
-      getProductResolvedField("PRODUCT KEY") ||
-      getProductResolvedField("DESCRIPTION");
-
-    if (productKeyField) addField(productKeyField);
+  if (isActive(filters.customerType)) {
+    const field = getCustomerTypeResolvedField();
+    if (field) addField(field);
   }
 
   // =========================
-  // TIME CASCADE (FIXED)
+  // PRODUCT
+  // =========================
+
+  if (isActive(filters.productKey)) {
+    const field =
+      getProductResolvedField("PRODUCT KEY") ||
+      getProductResolvedField("DESCRIPTION");
+
+    if (field) addField(field);
+  }
+
+  // =========================
+  // TIME HIERARCHY
   // =========================
 
   const yearField = getTimeResolvedField("Year");
   const quarterField = getTimeResolvedField("Quarter");
   const monthField = getTimeResolvedField("Month");
 
-  const isFactSales = String(factGroup).toLowerCase().includes("sales");
+  const hasYear = isActive(filters.year);
+  const hasQuarter = isActive(filters.quarter);
+  const hasMonth = isActive(filters.month);
 
-  // luôn có Year
+  // Year luôn có
   if (yearField && filterUsage?.year !== false) {
     addField(yearField);
   }
 
-  // nếu year không phải ALL thì mới mở Quarter
-  if (!isYearAll && quarterField && filterUsage?.quarter !== false) {
+  // Quarter xuất hiện nếu:
+  // - quarter filter có value
+  // - hoặc year có value
+  if (
+    quarterField &&
+    filterUsage?.quarter !== false &&
+    (hasQuarter || hasYear)
+  ) {
     addField(quarterField);
+  }
 
-    // nếu quarter không phải ALL thì mới mở Month
-    if (!isQuarterAll && monthField && filterUsage?.month !== false) {
-      addField(monthField);
+  // Month xuất hiện nếu:
+  // - month filter có value
+  // - hoặc quarter có value
+  if (
+    monthField &&
+    filterUsage?.month !== false &&
+    (hasMonth || hasQuarter)
+  ) {
+    addField(monthField);
 
-      // Inventory cần thêm Time Key
-      if (!isFactSales) {
-        const timeKeyField = getTimeResolvedField("Time Key");
-        if (timeKeyField) addField(timeKeyField);
-      }
+    // Inventory cần thêm Time Key
+    if (!isFactSales) {
+      const timeKeyField = getTimeResolvedField("Time Key");
+      if (timeKeyField) addField(timeKeyField);
     }
   }
 
@@ -564,12 +589,25 @@ async function probeValidFields({ cubeName, hierarchy, path, measures, selectedF
 
 
 // Clean filters: loại bỏ các trường không sử dụng ('all', '', null, undefined)
+// Hỗ trợ cả string và string[] (multi-select)
 function cleanFilters(filters) {
   const cleaned = {};
   for (const key in filters) {
-    const value = String(filters[key] ?? '').trim().toLowerCase();
-    if (value && value !== 'all' && value !== 'tat ca' && value !== 'tất cả') {
-      cleaned[key] = filters[key];
+    const value = filters[key];
+    if (Array.isArray(value)) {
+      // Giữ array nếu có ít nhất 1 phần tử hợp lệ
+      const validItems = value.filter(v => {
+        const n = String(v ?? '').trim().toLowerCase();
+        return n && n !== 'all' && n !== 'tat ca' && n !== 'tất cả';
+      });
+      if (validItems.length > 0) {
+        cleaned[key] = validItems;
+      }
+    } else {
+      const n = String(value ?? '').trim().toLowerCase();
+      if (n && n !== 'all' && n !== 'tat ca' && n !== 'tất cả') {
+        cleaned[key] = value;
+      }
     }
   }
   return cleaned;

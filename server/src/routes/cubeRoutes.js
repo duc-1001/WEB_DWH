@@ -124,28 +124,30 @@ function normalizeQueryPayload(payload) {
   const filters = safePayload.filters && typeof safePayload.filters === "object"
     ? { ...safePayload.filters }
     : {};
+
   // Nhận filterUsage nếu có
   const filterUsage = safePayload.filterUsage && typeof safePayload.filterUsage === "object" ? { ...safePayload.filterUsage } : null;
 
   // Nếu có filterUsage, loại bỏ các filter thuộc group bị tắt
+  // Hỗ trợ cả string và string[] (multi-select) cho year/quarter/month/state/city
   if (filterUsage) {
     // Time group
     if (!filterUsage.year && !filterUsage.quarter && !filterUsage.month) {
-      filters.year = 'all';
-      filters.quarter = 'all';
-      filters.month = 'all';
+      filters.year = [];
+      filters.quarter = [];
+      filters.month = [];
     } else {
-      if (!filterUsage.year) filters.year = 'all';
-      if (!filterUsage.quarter) filters.quarter = 'all';
-      if (!filterUsage.month) filters.month = 'all';
+      if (!filterUsage.year) filters.year = [];
+      if (!filterUsage.quarter) filters.quarter = [];
+      if (!filterUsage.month) filters.month = [];
     }
     // Location group
     if (!filterUsage.state && !filterUsage.city) {
-      filters.state = '';
-      filters.city = '';
+      filters.state = [];
+      filters.city = [];
     } else {
-      if (!filterUsage.state) filters.state = '';
-      if (!filterUsage.city) filters.city = '';
+      if (!filterUsage.state) filters.state = [];
+      if (!filterUsage.city) filters.city = [];
     }
     // Customer type
     if (filters.hasOwnProperty('customerType') && !filterUsage.customerType) {
@@ -469,7 +471,8 @@ async function handleLocationOptions(req, res) {
       path: [],
       filters: {
         ...baseFilters,
-        state: normalizeText(filters.state),
+        // Khi lấy city options, không cần filter theo state (trả về tất cả cities theo tất cả states)
+        state: [],
       },
       filterUsage,
     });
@@ -582,9 +585,10 @@ async function handleTimeOptions(req, res) {
 
     const baseFilters = {
       ...filters,
-      year: "",
-      quarter: "",
-      month: "",
+      // Xóa time filters để lấy tất cả options có sẵn (FE tự validate)
+      year: [],
+      quarter: [],
+      month: [],
     };
 
     const yearResult = await fetchCubeSlice({
@@ -607,10 +611,7 @@ async function handleTimeOptions(req, res) {
       dimensionFields: [yearField, quarterField],
       hierarchy: yearField.hierarchy,
       path: [],
-      filters: {
-        ...baseFilters,
-        year: normalizeText(filters.year),
-      },
+      filters: baseFilters, // không filter theo year để lấy tất cả quarters
       filterUsage,
     });
 
@@ -624,11 +625,7 @@ async function handleTimeOptions(req, res) {
       dimensionFields: [yearField, quarterField, monthField],
       hierarchy: yearField.hierarchy,
       path: [],
-      filters: {
-        ...baseFilters,
-        year: normalizeText(filters.year),
-        quarter: normalizeText(filters.quarter),
-      },
+      filters: baseFilters, // không filter theo year/quarter để lấy tất cả months
       filterUsage,
     });
 
