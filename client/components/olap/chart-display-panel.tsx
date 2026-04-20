@@ -11,6 +11,7 @@ import {
   LineChart,
   Pie,
   PieChart,
+  Label,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -528,7 +529,7 @@ export function ChartDisplayPanel({
   const primaryMeasure = selectedMeasures[0]
   const timeColumns = tableColumns.filter((col) => isMonthColumn(col) || isQuarterColumn(col) || isYearColumn(col))
   const categoryColumns = tableColumns.filter((col) => !isMonthColumn(col) && !isQuarterColumn(col) && !isYearColumn(col))
-  
+
   const monthColumn = timeColumns.find(isMonthColumn)
   const quarterColumn = timeColumns.find(isQuarterColumn)
   const yearColumn = timeColumns.find(isYearColumn)
@@ -604,22 +605,22 @@ export function ChartDisplayPanel({
   const yAxisDisplayLabel = selectedMeasures.length > 0 ? selectedMeasures.map(formatMeasureLabel).join(', ') : 'Giá trị'
   const mainXAxisKey = chartXAxisColumn?.key || ''
   const timeXAxisKey = timeColumn?.key || ''
-  
-  type SubChartConfig = 
+
+  type SubChartConfig =
     | { type: 'trend', id: string, title: string, data: any[], xAxisLabel: string, yAxisLabel: string, measureName: string }
     | { type: 'top-bar', id: string, title: string, data: any[], xAxisLabel: string, yAxisLabel: string, isVertical: boolean, measureName: string }
     | { type: 'category-time', id: string, title: string, data: any[], xAxisLabel: string, yAxisLabel: string, categories: string[], measureName: string }
     | { type: 'pie', id: string, title: string, data: any[], xAxisLabel: string, measureName: string }
-    
+
   const dynamicCharts = useMemo(() => {
     if (selectedMeasures.length === 0 || filteredRows.length === 0) return [] as SubChartConfig[];
-    
+
     const charts: SubChartConfig[] = [];
-    
+
     // Generate dynamic charts for each selected measure
     for (const measure of selectedMeasures) {
       const measureLabel = formatMeasureLabel(measure);
-      
+
       // 1. Trend Chart (if time dimension exists)
       if (timeColumn && timeKind && mainXAxisKey !== timeColumn.key) {
         const trendData = aggregateMeasureByTimeAxis(filteredRows, measure, filters, timeColumns);
@@ -635,22 +636,22 @@ export function ChartDisplayPanel({
           });
         }
       }
-      
+
       // 2. Top-N and Category-Time Charts
       for (const categoryCol of categoryColumns) {
         if (categoryCol.key === mainXAxisKey) continue;
-        
+
         const distinctCount = getDistinctValueCount(filteredRows, categoryCol, filters);
         if (distinctCount <= 1) continue;
-        
+
         // Top 10 Bar Chart
         const topNData = aggregateMeasureByColumn(filteredRows, categoryCol, measure, filters, 10);
         if (topNData.length > 0) {
-          const isCustomerOrStore = categoryCol.label.toLowerCase().includes('khách hàng') || 
-                                   categoryCol.label.toLowerCase().includes('customer') || 
-                                   categoryCol.label.toLowerCase().includes('store') || 
-                                   categoryCol.label.toLowerCase().includes('cửa hàng');
-          
+          const isCustomerOrStore = categoryCol.label.toLowerCase().includes('khách hàng') ||
+            categoryCol.label.toLowerCase().includes('customer') ||
+            categoryCol.label.toLowerCase().includes('store') ||
+            categoryCol.label.toLowerCase().includes('cửa hàng');
+
           charts.push({
             type: 'top-bar',
             id: `top-${measure}-${categoryCol.key}`,
@@ -662,71 +663,71 @@ export function ChartDisplayPanel({
             measureName: measure
           });
         }
-        
+
         // Top 5 Categories Over Time
         if (timeColumn && timeKind) {
           const top5Categories = aggregateMeasureByColumn(filteredRows, categoryCol, measure, filters, 5).map(item => item.name);
-          
+
           if (top5Categories.length > 0) {
             const timeLabels = aggregateMeasureByTimeAxis(filteredRows, measure, filters, timeColumns).map(item => item.name);
             const byTime = new Map<string, Record<string, number | string>>();
-            
+
             for (const label of timeLabels) {
               const seed: Record<string, number | string> = { label };
               for (const cat of top5Categories) seed[cat] = 0;
               byTime.set(label, seed);
             }
-            
+
             for (const row of filteredRows) {
-               const timeLabel = buildTimeAxisLabel(row, filters, timeColumns);
-               const catValue = getColumnValue(row, categoryCol, filters);
-               if (!top5Categories.includes(catValue)) continue;
-               
-               const numeric = parseMeasureValue(row.measures?.[measure]);
-               if (!Number.isFinite(numeric)) continue;
-               
-               const current = byTime.get(timeLabel);
-               if (current) {
-                  current[catValue] = Number(current[catValue] || 0) + numeric;
-               }
+              const timeLabel = buildTimeAxisLabel(row, filters, timeColumns);
+              const catValue = getColumnValue(row, categoryCol, filters);
+              if (!top5Categories.includes(catValue)) continue;
+
+              const numeric = parseMeasureValue(row.measures?.[measure]);
+              if (!Number.isFinite(numeric)) continue;
+
+              const current = byTime.get(timeLabel);
+              if (current) {
+                current[catValue] = Number(current[catValue] || 0) + numeric;
+              }
             }
-            
+
             const catTimeData = Array.from(byTime.values());
             if (catTimeData.length > 0) {
-               charts.push({
-                 type: 'category-time',
-                 id: `time-${measure}-${categoryCol.key}`,
-                 title: `Biến động Top 5 ${categoryCol.label} theo thời gian (${measureLabel})`,
-                 data: catTimeData,
-                 xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
-                 yAxisLabel: measureLabel,
-                 categories: top5Categories,
-                 measureName: measure
-               });
+              charts.push({
+                type: 'category-time',
+                id: `time-${measure}-${categoryCol.key}`,
+                title: `Biến động Top 5 ${categoryCol.label} theo thời gian (${measureLabel})`,
+                data: catTimeData,
+                xAxisLabel: timeKind === 'month' ? 'Tháng' : timeKind === 'quarter' ? 'Quý' : 'Năm',
+                yAxisLabel: measureLabel,
+                categories: top5Categories,
+                measureName: measure
+              });
             }
           }
         }
       }
-      
+
       // 3. Composition Pie Chart
       if (chartType !== 'pie' && chartXAxisColumn) {
-         const distinctCount = getDistinctValueCount(filteredRows, chartXAxisColumn, filters);
-         if (distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
-             const pieData = aggregateMeasureByColumn(filteredRows, chartXAxisColumn, measure, filters, 8);
-             if (pieData.length > 0) {
-                 charts.push({
-                    type: 'pie',
-                    id: `pie-${measure}-${chartXAxisColumn.key}`,
-                    title: `Cơ cấu ${measureLabel} theo ${chartXAxisColumn.label}`,
-                    data: pieData,
-                    xAxisLabel: chartXAxisColumn.label,
-                    measureName: measure
-                 });
-             }
-         }
+        const distinctCount = getDistinctValueCount(filteredRows, chartXAxisColumn, filters);
+        if (distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
+          const pieData = aggregateMeasureByColumn(filteredRows, chartXAxisColumn, measure, filters, 8);
+          if (pieData.length > 0) {
+            charts.push({
+              type: 'pie',
+              id: `pie-${measure}-${chartXAxisColumn.key}`,
+              title: `Cơ cấu ${measureLabel} theo ${chartXAxisColumn.label}`,
+              data: pieData,
+              xAxisLabel: chartXAxisColumn.label,
+              measureName: measure
+            });
+          }
+        }
       }
     }
-    
+
     return charts;
   }, [filteredRows, selectedMeasures, timeColumns, categoryColumns, chartXAxisColumn, timeColumn, timeKind, filters, chartType, mainXAxisKey]);
 
@@ -760,197 +761,251 @@ export function ChartDisplayPanel({
         <div>
           <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{mainChartTitle}</h4>
           <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            {chartType === 'line' ? (
-              <LineChart data={chartData} margin={MAIN_CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                <XAxis
-                  dataKey="label"
-                  tick={AXIS_TICK}
-                  tickFormatter={(value) => formatAxisTick(value, 16)}
-                  interval="preserveStartEnd"
-                  minTickGap={18}
-                  angle={-15}
-                  textAnchor="end"
-                  height={48}
-                  label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                <YAxis
-                  yAxisId={primaryYAxisId}
-                  tick={AXIS_TICK}
-                  width={56}
-                  label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                {useDualAxis ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              {chartType === 'line' ? (
+                <LineChart data={chartData} margin={MAIN_CHART_MARGIN}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                  <XAxis
+                    dataKey="label"
+                    tick={AXIS_TICK}
+                    tickFormatter={(value) => formatAxisTick(value, 16)}
+                    interval="preserveStartEnd"
+                    minTickGap={18}
+                    angle={-15}
+                    textAnchor="end"
+                    height={48}
+                    label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
+                  />
                   <YAxis
-                    yAxisId={secondaryYAxisId}
-                    orientation="right"
+                    yAxisId={primaryYAxisId}
                     tick={AXIS_TICK}
                     width={56}
-                    label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
                   />
-                ) : null}
-                <Tooltip />
-                <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
-                {selectedMeasures.map((measure, index) => (
-                  <Line
-                    key={measure}
-                    type="monotone"
-                    dataKey={measure}
-                    yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
-                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            ) : chartType === 'area' ? (
-              <AreaChart data={chartData} margin={MAIN_CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                <XAxis
-                  dataKey="label"
-                  tick={AXIS_TICK}
-                  tickFormatter={(value) => formatAxisTick(value, 16)}
-                  interval="preserveStartEnd"
-                  minTickGap={18}
-                  angle={-15}
-                  textAnchor="end"
-                  height={48}
-                  label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                <YAxis
-                  yAxisId={primaryYAxisId}
-                  tick={AXIS_TICK}
-                  width={56}
-                  label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                {useDualAxis ? (
-                  <YAxis
-                    yAxisId={secondaryYAxisId}
-                    orientation="right"
-                    tick={AXIS_TICK}
-                    width={56}
-                    label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                  />
-                ) : null}
-                <Tooltip />
-                <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
-                {selectedMeasures.map((measure, index) => (
-                  <Area
-                    key={measure}
-                    type="monotone"
-                    dataKey={measure}
-                    yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
-                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                    fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    fillOpacity={0.2}
-                    strokeWidth={2}
-                  />
-                ))}
-              </AreaChart>
-            ) : chartType === 'stackedBar' ? (
-              <BarChart data={chartData} margin={MAIN_CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                <XAxis
-                  dataKey="label"
-                  tick={AXIS_TICK}
-                  tickFormatter={(value) => formatAxisTick(value, 16)}
-                  interval="preserveStartEnd"
-                  minTickGap={18}
-                  angle={-15}
-                  textAnchor="end"
-                  height={48}
-                  label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                <YAxis
-                  yAxisId={primaryYAxisId}
-                  tick={AXIS_TICK}
-                  width={56}
-                  label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                {useDualAxis ? (
-                  <YAxis
-                    yAxisId={secondaryYAxisId}
-                    orientation="right"
-                    tick={AXIS_TICK}
-                    width={56}
-                    label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                  />
-                ) : null}
-                <Tooltip />
-                <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
-                {selectedMeasures.map((measure, index) => (
-                  <Bar
-                    key={measure}
-                    stackId="total"
-                    dataKey={measure}
-                    yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
-                    fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    radius={[6, 6, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            ) : chartType === 'pie' ? (
-              <PieChart>
-                <Tooltip labelFormatter={(value) => formatCategoryLabelByAxis(String(value || ''), xAxisLabel)} />
-                <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
-                <Pie
-                  data={pieChartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={120}
-                  label
-                >
-                  {pieChartData.map((item, index) => (
-                    <Cell key={`${item.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  {useDualAxis ? (
+                    <YAxis
+                      yAxisId={secondaryYAxisId}
+                      orientation="right"
+                      tick={AXIS_TICK}
+                      width={56}
+                      label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    />
+                  ) : null}
+                  <Tooltip />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
+                  {selectedMeasures.map((measure, index) => (
+                    <Line
+                      key={measure}
+                      type="monotone"
+                      dataKey={measure}
+                      yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
+                      stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                      strokeWidth={2}
+                      dot={false}
+                    />
                   ))}
-                </Pie>
-              </PieChart>
-            ) : (
-              <BarChart data={chartData} margin={MAIN_CHART_MARGIN}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                <XAxis
-                  dataKey="label"
-                  tick={AXIS_TICK}
-                  tickFormatter={(value) => formatAxisTick(value, 16)}
-                  interval="preserveStartEnd"
-                  minTickGap={18}
-                  angle={-15}
-                  textAnchor="end"
-                  height={48}
-                  label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                <YAxis
-                  yAxisId={primaryYAxisId}
-                  tick={AXIS_TICK}
-                  width={56}
-                  label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                />
-                {useDualAxis ? (
+                </LineChart>
+              ) : chartType === 'area' ? (
+                <AreaChart data={chartData} margin={MAIN_CHART_MARGIN}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                  <XAxis
+                    dataKey="label"
+                    tick={AXIS_TICK}
+                    tickFormatter={(value) => formatAxisTick(value, 16)}
+                    interval="preserveStartEnd"
+                    minTickGap={18}
+                    angle={-15}
+                    textAnchor="end"
+                    height={48}
+                    label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
+                  />
                   <YAxis
-                    yAxisId={secondaryYAxisId}
-                    orientation="right"
+                    yAxisId={primaryYAxisId}
                     tick={AXIS_TICK}
                     width={56}
-                    label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
                   />
-                ) : null}
-                <Tooltip />
-                <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
-                {selectedMeasures.map((measure, index) => (
-                  <Bar
-                    key={measure}
-                    dataKey={measure}
-                    yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
-                    fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    radius={[6, 6, 0, 0]}
+                  {useDualAxis ? (
+                    <YAxis
+                      yAxisId={secondaryYAxisId}
+                      orientation="right"
+                      tick={AXIS_TICK}
+                      width={56}
+                      label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    />
+                  ) : null}
+                  <Tooltip />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
+                  {selectedMeasures.map((measure, index) => (
+                    <Area
+                      key={measure}
+                      type="monotone"
+                      dataKey={measure}
+                      yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
+                      stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                      fillOpacity={0.2}
+                      strokeWidth={2}
+                    />
+                  ))}
+                </AreaChart>
+              ) : chartType === 'stackedBar' ? (
+                <BarChart data={chartData} margin={MAIN_CHART_MARGIN}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                  <XAxis
+                    dataKey="label"
+                    tick={AXIS_TICK}
+                    tickFormatter={(value) => formatAxisTick(value, 16)}
+                    interval="preserveStartEnd"
+                    minTickGap={18}
+                    angle={-15}
+                    textAnchor="end"
+                    height={48}
+                    label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
                   />
-                ))}
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+                  <YAxis
+                    yAxisId={primaryYAxisId}
+                    tick={AXIS_TICK}
+                    width={56}
+                    label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                  />
+                  {useDualAxis ? (
+                    <YAxis
+                      yAxisId={secondaryYAxisId}
+                      orientation="right"
+                      tick={AXIS_TICK}
+                      width={56}
+                      label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    />
+                  ) : null}
+                  <Tooltip />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
+                  {selectedMeasures.map((measure, index) => (
+                    <Bar
+                      key={measure}
+                      stackId="total"
+                      dataKey={measure}
+                      yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                      radius={[6, 6, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              ) : chartType === 'pie' ? (
+                <PieChart>
+                  <Tooltip 
+                    formatter={(value) => [Number(value).toLocaleString('vi-VN'), 'Giá trị']}
+                    labelFormatter={(value) => formatCategoryLabelByAxis(String(value || ''), xAxisLabel)} 
+                  />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="right" 
+                    wrapperStyle={LEGEND_STYLE} 
+                    payload={chartData.map((item, idx) => ({
+                      value: formatCategoryLabelByAxis(String(item.label || 'N/A'), xAxisLabel),
+                      type: 'rect',
+                      color: CHART_COLORS[idx % CHART_COLORS.length]
+                    })).filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+                  />
+                  {selectedMeasures.slice(0, 2).map((measure, index) => {
+                    const currentPieData = chartData
+                      .map((item) => ({
+                        name: String(item.label || 'N/A'),
+                        value: parseMeasureValue(item[measure] as number | string),
+                      }))
+                      .filter((item) => Number.isFinite(item.value) && item.value > 0)
+                      .slice(0, 10);
+                    
+                    const isDual = selectedMeasures.length >= 2;
+                    const cxVal = isDual ? (index === 0 ? '25%' : '75%') : '50%';
+                    const outerRadius = isDual ? 85 : 110;
+
+                    return (
+                      <Pie
+                        key={measure}
+                        data={currentPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx={cxVal}
+                        cy="50%"
+                        innerRadius={isDual ? 45 : 60}
+                        outerRadius={outerRadius}
+                        paddingAngle={2}
+                        label={({ name, percent }) => `${formatAxisTick(formatCategoryLabelByAxis(name, xAxisLabel), 6)} ${(percent * 100).toFixed(0)}%`}
+                        stroke="none"
+                      >
+                        <Label
+                          position="center"
+                          content={() => {
+                            return (
+                              <text
+                                x={cxVal}
+                                y="50%"
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                style={{
+                                  fontSize: isDual ? '11px' : '13px',
+                                  fontWeight: 'bold',
+                                  fill: '#334155',
+                                }}
+                              >
+                                {formatMeasureLabel(measure)}
+                              </text>
+                            );
+                          }}
+                        />
+                        {currentPieData.map((entry, entryIndex) => (
+                          <Cell key={`${measure}-${entry.name}-${entryIndex}`} fill={CHART_COLORS[entryIndex % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    );
+                  })}
+                </PieChart>
+
+
+              ) : (
+                <BarChart data={chartData} margin={MAIN_CHART_MARGIN}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                  <XAxis
+                    dataKey="label"
+                    tick={AXIS_TICK}
+                    tickFormatter={(value) => formatAxisTick(value, 16)}
+                    interval="preserveStartEnd"
+                    minTickGap={18}
+                    angle={-15}
+                    textAnchor="end"
+                    height={48}
+                    label={{ value: `Trục X: ${xAxisLabel}`, position: 'bottom', offset: 16, fontSize: AXIS_LABEL_FONT_SIZE }}
+                  />
+                  <YAxis
+                    yAxisId={primaryYAxisId}
+                    tick={AXIS_TICK}
+                    width={56}
+                    label={{ value: `Trục Y trái: ${formatMeasureLabel(mainChartMeasures[0] || yAxisLabel)}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                  />
+                  {useDualAxis ? (
+                    <YAxis
+                      yAxisId={secondaryYAxisId}
+                      orientation="right"
+                      tick={AXIS_TICK}
+                      width={56}
+                      label={{ value: `Trục Y phải: ${formatMeasureLabel(mainChartMeasures[1] || '')}`, angle: 90, position: 'right', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                    />
+                  ) : null}
+                  <Tooltip />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={LEGEND_STYLE} formatter={(value) => formatMeasureLabel(String(value || ''))} />
+                  {selectedMeasures.map((measure, index) => (
+                    <Bar
+                      key={measure}
+                      dataKey={measure}
+                      yAxisId={useDualAxis && index === 1 ? secondaryYAxisId : primaryYAxisId}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                      radius={[6, 6, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              )}
+            </ResponsiveContainer>
           </div>
         </div>
       )}
