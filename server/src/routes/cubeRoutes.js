@@ -277,6 +277,26 @@ function getTimeField(level) {
 }
 
 function getLocationField(level, factGroup) {
+  const canonicalKey = resolveFactGroupCanonicalKey(factGroup);
+
+  // Fact Inventory: lấy location từ DIM STORE
+  if (canonicalKey === "factinventory") {
+    const storeDimension = cubeDefinition.dimensions.find(
+      (dimension) => String(dimension?.label || "") === "DIM STORE"
+    );
+    if (!storeDimension || !Array.isArray(storeDimension.levels) || !storeDimension.levels.includes(level)) {
+      return null;
+    }
+    return {
+      hierarchy: storeDimension.hierarchy,
+      level,
+      dimensionLabel: storeDimension.label,
+      label: `${storeDimension.label} / ${level}`,
+      name: `${storeDimension.label} / ${level}`,
+    };
+  }
+
+  // Fact Sales và các fact group khác: lấy location từ DIM CUSTOMER
   const customerDimension = cubeDefinition.dimensions.find(
     (dimension) => String(dimension?.label || "") === "DIM CUSTOMER"
   );

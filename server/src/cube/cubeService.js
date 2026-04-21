@@ -199,12 +199,22 @@ function applyFilters(rows, filters = {}) {
     }
 
     if (hasState) {
-      const rowState = getFormattedDimensionValue(row, ["STATE", "DIM CUSTOMER / STATE", "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::STATE"]);
+      const rowState = getFormattedDimensionValue(row, [
+        "STATE",
+        "DIM STORE / STATE",
+        "DIM CUSTOMER / STATE",
+        "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::STATE",
+      ]);
       if (!matchesMultiFilter(rowState, filters.state)) return false;
     }
 
     if (hasCity) {
-      const rowCity = getFormattedDimensionValue(row, ["CITY", "DIM CUSTOMER / CITY", "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::CITY"]);
+      const rowCity = getFormattedDimensionValue(row, [
+        "CITY",
+        "DIM STORE / CITY",
+        "DIM CUSTOMER / CITY",
+        "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::CITY",
+      ]);
       if (!matchesMultiFilter(rowCity, filters.city)) return false;
     }
 
@@ -371,6 +381,18 @@ function buildResolvedFieldFromDimensionLevel(dimension, level) {
 }
 
 function getLocationResolvedField(level, factGroup) {
+  const isInventory = String(factGroup || "").toLowerCase().includes("inventory");
+
+  if (isInventory) {
+    // Fact Inventory: lấy STATE/CITY từ DIM STORE
+    const storeDimension = getDimensionByLabel("DIM STORE");
+    if (storeDimension) {
+      return buildResolvedFieldFromDimensionLevel(storeDimension, level);
+    }
+    return null;
+  }
+
+  // Fact Sales và mặc định: lấy từ DIM CUSTOMER
   const customerDimension = getDimensionByLabel("DIM CUSTOMER");
   return buildResolvedFieldFromDimensionLevel(customerDimension, level);
 }

@@ -7,6 +7,11 @@ const cubeDefinition = {
       levels: ["CITY", "CUSTOMER KEY", "CUSTOMER NAME", "CUSTOMER TYPE", "LOCATION KEY", "STATE"],
     },
     {
+      label: "DIM STORE",
+      hierarchy: "[DIM STORE].[Hierarchy]",
+      levels: ["CITY", "STATE", "STORE KEY", "STORE NAME"],
+    },
+    {
       label: "DIM PRODUCT",
       hierarchy: "[DIM PRODUCT].[PRODUCT KEY]",
       levels: ["DESCRIPTION", "PRODUCT KEY", "PRODUCT SIZE", "WEIGHT"],
