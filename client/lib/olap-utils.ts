@@ -88,7 +88,7 @@ export const DIMENSION_ALLOWED_LEVELS: Record<string, string[]> = {
 }
 // ,"WEIGHT","PRODUCT SIZE","DESCRIPTION"
 export const DIMENSION_ALLOWED_TABLE_LEVELS: Record<string, string[]> = {
-  'DIM CUSTOMER': ['CUSTOMER KEY', 'CUSTOMER NAME'],
+  'DIM CUSTOMER': ['CUSTOMER KEY', 'CUSTOMER NAME', "CITY","STATE"],
   'DIM STORE': ['STORE KEY',"STATE","CITY","PHONENUMBER"],
   "DIM LOCATION": ["STATE", "CITY"],
   "DIM TIME": ["YEAR", "QUARTER", "MONTH"],
@@ -318,12 +318,16 @@ export function getQueryableCurrentLevels(state: FactState, selectedDimensions: 
 }
 
 export function matchesSearchQuery(value: string, query: string) {
-  const normalizedValue = String(value || '').trim().toLowerCase()
-  const normalizedQuery = String(query || '').trim().toLowerCase()
-  if (!normalizedQuery) return true
-  if (normalizedValue === normalizedQuery) return true
-  const tokens = normalizedQuery.split(/\s+/).filter(Boolean)
-  return tokens.every((token) => normalizedValue.includes(token))
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  // Strict equality for customerType
+  if (normalizedQuery === 'khách hàng bưu điện' || normalizedQuery === 'khach hang buu dien') {
+    return normalizedValue === normalizedQuery;
+  }
+  if (normalizedValue === normalizedQuery) return true;
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  return tokens.every((token) => normalizedValue.includes(token));
 }
 
 export function filterRowsByMemberQueries(

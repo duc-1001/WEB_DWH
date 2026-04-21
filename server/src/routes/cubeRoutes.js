@@ -69,23 +69,7 @@ function getMeasureLabelsByFactGroup(factGroup) {
 }
 
 function getDimensionsByFactGroup(factGroup) {
-  const normalized = normalizeFactGroupKey(factGroup);
-  const allDimensions = Array.isArray(cubeDefinition.dimensions) ? cubeDefinition.dimensions : [];
-
-  if (!normalized) {
-    return allDimensions;
-  }
-
-  if (normalized.includes("factsales")) {
-    return allDimensions;
-  }
-
-  if (normalized.includes("factinventory")) {
-    // Inventory typically does not use customer analysis as a core axis.
-    return allDimensions.filter((dimension) => String(dimension?.label || "").trim().toLowerCase() !== "dim customer");
-  }
-
-  return allDimensions;
+  return Array.isArray(cubeDefinition.dimensions) ? cubeDefinition.dimensions : [];
 }
 
 function getUiMetaFromCubeDefinition(factGroup) {
@@ -293,40 +277,19 @@ function getTimeField(level) {
 }
 
 function getLocationField(level, factGroup) {
-  const isInventory = String(factGroup || "").toLowerCase().includes("inventory");
-
-  if (isInventory) {
-    // CUBE_INVENTORY dung DIM STORE, khong co DIM LOCATION
-    const storeDimension =
-      cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM STORE") ||
-      cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM LOCATION");
-    if (!storeDimension || !Array.isArray(storeDimension.levels) || !storeDimension.levels.includes(level)) {
-      return null;
-    }
-    return {
-      hierarchy: storeDimension.hierarchy,
-      level,
-      dimensionLabel: storeDimension.label,
-      label: `${storeDimension.label} / ${level}`,
-      name: `${storeDimension.label} / ${level}`,
-    };
-  }
-
-  // CUBE_SALES dung DIM LOCATION
-  const locationDimension =
-    cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM LOCATION") ||
-    cubeDefinition.dimensions.find((dimension) => String(dimension?.label || "") === "DIM STORE");
-
-  if (!locationDimension || !Array.isArray(locationDimension.levels) || !locationDimension.levels.includes(level)) {
+  const customerDimension = cubeDefinition.dimensions.find(
+    (dimension) => String(dimension?.label || "") === "DIM CUSTOMER"
+  );
+  if (!customerDimension || !Array.isArray(customerDimension.levels) || !customerDimension.levels.includes(level)) {
     return null;
   }
 
   return {
-    hierarchy: locationDimension.hierarchy,
+    hierarchy: customerDimension.hierarchy,
     level,
-    dimensionLabel: locationDimension.label,
-    label: `${locationDimension.label} / ${level}`,
-    name: `${locationDimension.label} / ${level}`,
+    dimensionLabel: customerDimension.label,
+    label: `${customerDimension.label} / ${level}`,
+    name: `${customerDimension.label} / ${level}`,
   };
 }
 

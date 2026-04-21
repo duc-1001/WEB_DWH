@@ -618,6 +618,7 @@ export function ChartDisplayPanel({
     const charts: SubChartConfig[] = [];
 
     // Generate dynamic charts for each selected measure
+    const pieChartIds = new Set();
     for (const measure of selectedMeasures) {
       const measureLabel = formatMeasureLabel(measure);
 
@@ -709,20 +710,22 @@ export function ChartDisplayPanel({
         }
       }
 
-      // 3. Composition Pie Chart
+      // 3. Composition Pie Chart (prevent duplicate)
       if (chartType !== 'pie' && chartXAxisColumn) {
         const distinctCount = getDistinctValueCount(filteredRows, chartXAxisColumn, filters);
-        if (distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
+        const pieId = `pie-${measure}-${chartXAxisColumn.key}`;
+        if (!pieChartIds.has(pieId) && distinctCount > 1 && distinctCount <= 8 && chartXAxisColumn.key !== timeColumn?.key) {
           const pieData = aggregateMeasureByColumn(filteredRows, chartXAxisColumn, measure, filters, 8);
           if (pieData.length > 0) {
             charts.push({
               type: 'pie',
-              id: `pie-${measure}-${chartXAxisColumn.key}`,
+              id: pieId,
               title: `Cơ cấu ${measureLabel} theo ${chartXAxisColumn.label}`,
               data: pieData,
               xAxisLabel: chartXAxisColumn.label,
               measureName: measure
             });
+            pieChartIds.add(pieId);
           }
         }
       }
@@ -931,7 +934,8 @@ export function ChartDisplayPanel({
                         innerRadius={isDual ? 45 : 60}
                         outerRadius={outerRadius}
                         paddingAngle={2}
-                        label={({ name, percent }) => `${formatAxisTick(formatCategoryLabelByAxis(name, xAxisLabel), 6)} ${(percent * 100).toFixed(0)}%`}
+                        // Increase maxLength for year label in pie chart to 20
+                        label={({ name, percent }) => `${formatAxisTick(formatCategoryLabelByAxis(name, xAxisLabel), 20)} ${(percent * 100).toFixed(0)}%`}
                         stroke="none"
                       >
                         <Label
@@ -1020,59 +1024,98 @@ export function ChartDisplayPanel({
           </div>
 
           <div className="grid gap-3 xl:grid-cols-2">
-            {dynamicCharts.map((chartConfig) => {
-              if (chartConfig.type === 'trend') {
-                return (
-                  <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
-                    <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
-                    <div className="h-56">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <LineChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                          <XAxis
-                            dataKey="name"
-                            tick={AXIS_TICK}
-                            height={42}
-                            label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 12, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <YAxis
-                            tick={AXIS_TICK}
-                            width={56}
-                            label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
-                          <Line type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={2.5} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )
-              }
-
-              if (chartConfig.type === 'top-bar') {
-                if (chartConfig.isVertical) {
+            {(() => {
+              // Remove duplicate charts by type, measureName, and xAxisLabel
+              const seen = new Set();
+              return dynamicCharts.filter((chartConfig) => {
+                const key = `${chartConfig.type}-${chartConfig.measureName || ''}-${chartConfig.xAxisLabel || ''}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              }).map((chartConfig) => {
+                if (chartConfig.type === 'trend') {
                   return (
                     <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
                       <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
                       <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                          <BarChart data={chartConfig.data} layout="vertical" margin={{ top: 10, right: 12, left: 34, bottom: 36 }}>
+                          <LineChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
                             <XAxis
-                              type="number"
+                              dataKey="name"
                               tick={AXIS_TICK}
+                              height={42}
                               label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 12, fontSize: AXIS_LABEL_FONT_SIZE }}
                             />
                             <YAxis
-                              type="category"
-                              dataKey="name"
                               tick={AXIS_TICK}
-                              tickFormatter={(value) => formatAxisTick(value, 14)}
-                              width={118}
-                              label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 8, fontSize: AXIS_LABEL_FONT_SIZE }}
+                              width={56}
+                              label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
                             />
                             <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
-                            <Bar dataKey="value" fill="#0284c7" radius={[0, 6, 6, 0]} />
+                            <Line type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={2.5} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (chartConfig.type === 'top-bar') {
+                  if (chartConfig.isVertical) {
+                    return (
+                      <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
+                        <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                            <BarChart data={chartConfig.data} layout="vertical" margin={{ top: 10, right: 12, left: 34, bottom: 36 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                              <XAxis
+                                type="number"
+                                tick={AXIS_TICK}
+                                label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 12, fontSize: AXIS_LABEL_FONT_SIZE }}
+                              />
+                              <YAxis
+                                type="category"
+                                dataKey="name"
+                                tick={AXIS_TICK}
+                                tickFormatter={(value) => formatAxisTick(value, 14)}
+                                width={118}
+                                label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 8, fontSize: AXIS_LABEL_FONT_SIZE }}
+                              />
+                              <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
+                              <Bar dataKey="value" fill="#0284c7" radius={[0, 6, 6, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
+                      <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                          <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                            <XAxis
+                              dataKey="name"
+                              tick={AXIS_TICK}
+                              tickFormatter={(value) => formatAxisTick(value, 10)}
+                              interval={0}
+                              angle={-25}
+                              textAnchor="end"
+                              height={50}
+                              label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 14, fontSize: AXIS_LABEL_FONT_SIZE }}
+                            />
+                            <YAxis
+                              tick={AXIS_TICK}
+                              width={56}
+                              label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                            />
+                            <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
+                            <Bar dataKey="value" fill="#9333ea" radius={[6, 6, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -1080,114 +1123,84 @@ export function ChartDisplayPanel({
                   )
                 }
 
-                return (
-                  <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
-                    <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
-                    <div className="h-56">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                          <XAxis
-                            dataKey="name"
-                            tick={AXIS_TICK}
-                            tickFormatter={(value) => formatAxisTick(value, 10)}
-                            interval={0}
-                            angle={-25}
-                            textAnchor="end"
-                            height={50}
-                            label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 14, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <YAxis
-                            tick={AXIS_TICK}
-                            width={56}
-                            label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
-                          <Bar dataKey="value" fill="#9333ea" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )
-              }
-
-              if (chartConfig.type === 'category-time') {
-                return (
-                  <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
-                    <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
-                    <div className="h-56">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
-                          <XAxis
-                            dataKey="label"
-                            tick={AXIS_TICK}
-                            height={42}
-                            label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 12, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <YAxis
-                            tick={AXIS_TICK}
-                            width={56}
-                            label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
-                          />
-                          <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
-                          <Legend wrapperStyle={LEGEND_STYLE} />
-                          {chartConfig.categories.map((category, index) => (
-                            <Bar
-                              key={category}
-                              stackId="stack"
-                              dataKey={category}
-                              fill={CHART_COLORS[index % CHART_COLORS.length]}
+                if (chartConfig.type === 'category-time') {
+                  return (
+                    <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
+                      <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                          <BarChart data={chartConfig.data} margin={SUB_CHART_MARGIN}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#dbe2e8" />
+                            <XAxis
+                              dataKey="label"
+                              tick={AXIS_TICK}
+                              height={42}
+                              label={{ value: `Trục X: ${chartConfig.xAxisLabel}`, position: 'bottom', offset: 12, fontSize: AXIS_LABEL_FONT_SIZE }}
                             />
-                          ))}
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )
-              }
-
-              if (chartConfig.type === 'pie') {
-                return (
-                  <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
-                    <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
-                    <p className="mb-2 text-[11px] text-slate-500">Chú giải theo màu: mỗi lát là một nhóm {chartConfig.xAxisLabel.toLowerCase()}.</p>
-                    <div className="h-56">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <PieChart>
-                          <Tooltip
-                            labelFormatter={(value) => formatCategoryLabelByAxis(String(value || ''), chartConfig.xAxisLabel)}
-                            formatter={(value) => Number(value).toLocaleString('vi-VN')}
-                          />
-                          <Legend
-                            verticalAlign="bottom"
-                            align="center"
-                            wrapperStyle={LEGEND_STYLE}
-                            formatter={(value) => formatCategoryLabelByAxis(String(value || ''), chartConfig.xAxisLabel)}
-                          />
-                          <Pie
-                            data={chartConfig.data}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="46%"
-                            outerRadius={85}
-                            label={false}
-                            labelLine={false}
-                          >
-                            {chartConfig.data.map((item, index) => (
-                              <Cell key={`dynamic-pie-${item.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            <YAxis
+                              tick={AXIS_TICK}
+                              width={56}
+                              label={{ value: `Trục Y: ${chartConfig.yAxisLabel}`, angle: -90, position: 'left', offset: 6, fontSize: AXIS_LABEL_FONT_SIZE }}
+                            />
+                            <Tooltip formatter={(value) => Number(value).toLocaleString('vi-VN')} />
+                            <Legend wrapperStyle={LEGEND_STYLE} />
+                            {chartConfig.categories.map((category, index) => (
+                              <Bar
+                                key={category}
+                                stackId="stack"
+                                dataKey={category}
+                                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                              />
                             ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
-                )
-              }
+                  )
+                }
 
-              return null
-            })}
+                if (chartConfig.type === 'pie') {
+                  return (
+                    <div key={chartConfig.id} className="rounded-lg border border-slate-100 p-3">
+                      <h4 className="mb-2 text-[11px] font-semibold text-slate-700">{chartConfig.title}</h4>
+                      <p className="mb-2 text-[11px] text-slate-500">Chú giải theo màu: mỗi lát là một nhóm {chartConfig.xAxisLabel.toLowerCase()}.</p>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                          <PieChart>
+                            <Tooltip
+                              labelFormatter={(value) => formatCategoryLabelByAxis(String(value || ''), chartConfig.xAxisLabel)}
+                              formatter={(value) => Number(value).toLocaleString('vi-VN')}
+                            />
+                            <Legend
+                              verticalAlign="bottom"
+                              align="center"
+                              wrapperStyle={LEGEND_STYLE}
+                              formatter={(value) => formatCategoryLabelByAxis(String(value || ''), chartConfig.xAxisLabel)}
+                            />
+                            <Pie
+                              data={chartConfig.data}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="46%"
+                              outerRadius={85}
+                              label={false}
+                              labelLine={false}
+                            >
+                              {chartConfig.data.map((item, index) => (
+                                <Cell key={`dynamic-pie-${item.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )
+                }
+
+                return null;
+              });
+            })()}
           </div>
         </div>
       ) : null}

@@ -12,16 +12,6 @@ const cubeDefinition = {
       levels: ["DESCRIPTION", "PRODUCT KEY", "PRODUCT SIZE", "WEIGHT"],
     },
     {
-      label: "DIM LOCATION",
-      hierarchy: "[DIM LOCATION].[Hierarchy]",
-      levels: ["CITY", "LOCATION KEY", "OFFICE ADDRESS", "STATE"],
-    },
-    {
-      label: "DIM STORE",
-      hierarchy: "[DIM STORE].[Hierarchy]",
-      levels: ["CITY", "LOCATION KEY", "OFFICE ADDRESS", "PHONE NUMBER", "STATE", "STORE KEY"],
-    },
-    {
       label: "Dim Time",
       hierarchy: "[Dim Time].[Hierarchy]",
       levels: ["Month", "Quarter", "Time Key", "Year"],
@@ -49,7 +39,7 @@ function getAllMeasures() {
 }
 
 function getDefaultHierarchy() {
-  return cubeDefinition.dimensions[3] || cubeDefinition.dimensions[0];
+  return cubeDefinition.dimensions[0];
 }
 
 function getDefaultMeasures() {

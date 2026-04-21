@@ -79,6 +79,11 @@ function matchesFilter(actualValue, expectedValue) {
     return true;
   }
 
+  // For customerType, only allow strict equality
+  if (expected === "khách hàng bưu điện" || expected === "khach hang buu dien" || expected === "khách hàng du lịch" || expected === "khach hang du lich") {
+    return actual === expected;
+  }
+
   return actual === expected || actual.includes(expected);
 }
 
@@ -194,23 +199,22 @@ function applyFilters(rows, filters = {}) {
     }
 
     if (hasState) {
-      const rowState = getFormattedDimensionValue(row, ["STATE", "DIM LOCATION / STATE", "DIM STORE / STATE"]);
+      const rowState = getFormattedDimensionValue(row, ["STATE", "DIM CUSTOMER / STATE", "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::STATE"]);
       if (!matchesMultiFilter(rowState, filters.state)) return false;
     }
 
     if (hasCity) {
-      const rowCity = getFormattedDimensionValue(row, ["CITY", "DIM LOCATION / CITY", "DIM STORE / CITY"]);
+      const rowCity = getFormattedDimensionValue(row, ["CITY", "DIM CUSTOMER / CITY", "DIM CUSTOMER / [DIM CUSTOMER].[Hierarchy]::CITY"]);
       if (!matchesMultiFilter(rowCity, filters.city)) return false;
     }
 
     if (hasStoreKey) {
       const storeKeyVal = filters.storeKey || filters.locationKey;
       const rowStoreKey = getFormattedDimensionValue(row, [
-        "DIM LOCATION / LOCATION KEY",
+        "DIM CUSTOMER / LOCATION KEY",
         "LOCATION KEY",
-        "STORE KEY",
-        "DIM STORE / STORE KEY",
-        "DIM STORE / LOCATION KEY",
+        "CUSTOMER KEY",
+        "DIM CUSTOMER / CUSTOMER KEY",
       ]);
       if (!matchesMultiFilter(rowStoreKey, storeKeyVal)) return false;
     }
@@ -367,23 +371,8 @@ function buildResolvedFieldFromDimensionLevel(dimension, level) {
 }
 
 function getLocationResolvedField(level, factGroup) {
-  const locationDimension = getDimensionByLabel("DIM LOCATION");
-  const storeDimension = getDimensionByLabel("DIM STORE");
-  const isInventory = String(factGroup || "").toLowerCase().includes("inventory");
-
-  if (isInventory) {
-    // CUBE_INVENTORY chi co DIM STORE, khong co DIM LOCATION
-    return (
-      buildResolvedFieldFromDimensionLevel(storeDimension, level) ||
-      buildResolvedFieldFromDimensionLevel(locationDimension, level)
-    );
-  }
-
-  // CUBE_SALES dung DIM LOCATION
-  return (
-    buildResolvedFieldFromDimensionLevel(locationDimension, level) ||
-    buildResolvedFieldFromDimensionLevel(storeDimension, level)
-  );
+  const customerDimension = getDimensionByLabel("DIM CUSTOMER");
+  return buildResolvedFieldFromDimensionLevel(customerDimension, level);
 }
 
 function getTimeResolvedField(level) {
