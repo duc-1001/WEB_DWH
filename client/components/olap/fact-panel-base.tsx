@@ -10,7 +10,10 @@ import {
   ChevronDown,
   Layers,
   Filter,
-  MoreHorizontal
+  MoreHorizontal,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -115,6 +118,40 @@ export function FactPanelBase({
   Skeleton,
 }: FactPanelBaseProps) {
   const [dimensionFilter, setDimensionFilter] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string; type: 'dimension' | 'measure'; dir: 'asc' | 'desc' } | null>(null);
+
+  function handleSortClick(key: string, type: 'dimension' | 'measure') {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) return { key, type, dir: 'asc' };
+      if (prev.dir === 'asc') return { key, type, dir: 'desc' };
+      return null; // cycle: asc → desc → none
+    });
+  }
+
+  const sortedRows = React.useMemo(() => {
+    if (!sortConfig) return filteredRows;
+    return [...filteredRows].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+
+      if (sortConfig.type === 'measure') {
+        aVal = Number(a.measures?.[sortConfig.key] ?? 0);
+        bVal = Number(b.measures?.[sortConfig.key] ?? 0);
+        return sortConfig.dir === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      // dimension column
+      const colKey = sortConfig.key;
+      const aKeys = Object.keys(a.dimensions || {});
+      const bKeys = Object.keys(b.dimensions || {});
+      const aFoundKey = aKeys.find((k) => k.toLowerCase().includes(colKey.toLowerCase()));
+      const bFoundKey = bKeys.find((k) => k.toLowerCase().includes(colKey.toLowerCase()));
+      aVal = aFoundKey ? String(a.dimensions[aFoundKey] ?? '') : '';
+      bVal = bFoundKey ? String(b.dimensions[bFoundKey] ?? '') : '';
+      const cmp = aVal.localeCompare(bVal, 'vi');
+      return sortConfig.dir === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredRows, sortConfig]);
   const filteredDimensionOptions = dimensionFilter
     ? availableDimensionOptions.filter((dimension) =>
       formatDimLabel(dimension.name).toLowerCase().includes(dimensionFilter.toLowerCase())
@@ -350,20 +387,48 @@ export function FactPanelBase({
                 <table className="w-full min-w-max border-collapse text-sm">
                   <thead className="sticky top-0 bg-slate-50 text-slate-700 shadow-sm z-10">
                     <tr>
-                      {tableColumns.map((column) => (
-                        <th key={column.key} className="border-b border-slate-200 px-4 py-2.5 text-left font-bold uppercase text-[10px] tracking-wider bg-slate-50">
-                          {column.label}
-                        </th>
-                      ))}
-                      {activeState.selectedMeasures.map((measure) => (
-                        <th key={measure} className="border-b border-slate-200 px-4 py-2.5 text-right font-bold uppercase text-[10px] tracking-wider bg-slate-50">
-                          {measure}
-                        </th>
-                      ))}
+                      {tableColumns.map((column) => {
+                        const isActive = sortConfig?.key === column.key && sortConfig?.type === 'dimension';
+                        return (
+                          <th
+                            key={column.key}
+                            onClick={() => handleSortClick(column.key, 'dimension')}
+                            className="border-b border-slate-200 px-4 py-2.5 text-left font-bold uppercase text-[10px] tracking-wider bg-slate-50 cursor-pointer select-none hover:bg-emerald-50 transition-colors group"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {column.label}
+                              {isActive && sortConfig?.dir === 'asc'
+                                ? <ArrowUp size={10} className="text-emerald-600" />
+                                : isActive && sortConfig?.dir === 'desc'
+                                ? <ArrowDown size={10} className="text-emerald-600" />
+                                : <ArrowUpDown size={10} className="text-slate-300 group-hover:text-slate-400 transition-colors" />}
+                            </span>
+                          </th>
+                        );
+                      })}
+                      {activeState.selectedMeasures.map((measure) => {
+                        const isActive = sortConfig?.key === measure && sortConfig?.type === 'measure';
+                        return (
+                          <th
+                            key={measure}
+                            onClick={() => handleSortClick(measure, 'measure')}
+                            className="border-b border-slate-200 px-4 py-2.5 text-right font-bold uppercase text-[10px] tracking-wider bg-slate-50 cursor-pointer select-none hover:bg-emerald-50 transition-colors group"
+                          >
+                            <span className="inline-flex items-center justify-end gap-1 w-full">
+                              {isActive && sortConfig?.dir === 'asc'
+                                ? <ArrowUp size={10} className="text-emerald-600" />
+                                : isActive && sortConfig?.dir === 'desc'
+                                ? <ArrowDown size={10} className="text-emerald-600" />
+                                : <ArrowUpDown size={10} className="text-slate-300 group-hover:text-slate-400 transition-colors" />}
+                              {measure}
+                            </span>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRows.map((row, rowIndex) => (
+                    {sortedRows.map((row, rowIndex) => (
                       <tr
                         key={rowIndex}
                         className="hover:bg-emerald-50/30 transition-colors border-b border-slate-50 last:border-0"
